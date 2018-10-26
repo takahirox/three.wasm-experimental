@@ -1,0 +1,237 @@
+﻿<html>
+	<head>
+	</head>
+	<body>
+		<script src="three/three.js"></script>
+		<script src="WebGLRenderer.js"></script>
+		<script src="libs/stats.min.js"></script>
+
+		<script>
+
+			setTimeout( function () {
+
+				initModule();
+				initThree();
+				init();
+				animate();
+
+			}, 1000 );
+
+			var renderer, scene;
+			var stats = new Stats();
+
+			document.body.appendChild( stats.dom );
+
+			function initModule() {
+
+				console.log( Module );
+
+				Module.functions = {};
+
+				Module.functions.sizeOfObject3D = Module.cwrap(
+					'sizeOfObject3D',
+					'number',
+					[]
+				);
+
+				Module.functions.sizeOfWebGLRenderer = Module.cwrap(
+					'sizeOfWebGLRenderer',
+					'number',
+					[]
+				);
+
+				Module.functions.Object3D_init = Module.cwrap(
+					'Object3D_init',
+					'number',
+					['number']
+				);
+
+				Module.functions.WebGLRenderer_init = Module.cwrap(
+					'WebGLRenderer_init',
+					'number',
+					[ 'number', 'number' ]
+				);
+
+				Module.functions.WebGLRenderer_setSize = Module.cwrap(
+					'WebGLRenderer_setSize',
+					'number',
+					[ 'number', 'number' ]
+				);
+
+				Module.functions.WebGLRenderer_clearColor = Module.cwrap(
+					'WebGLRenderer_clearColor',
+					'void',
+					[ 'number', 'number', 'number', 'number', 'number' ]
+				);
+
+				Module.functions.WebGLRenderer_render = Module.cwrap(
+					'WebGLRenderer_render',
+					'void',
+					[ 'number' ]
+				);
+
+			}
+
+			function initThree() {
+
+				THREE.Object3D.prototype.init = function () {
+
+					var pointer = Module._malloc( Module.functions.sizeOfObject3D() );
+					Module.functions.Object3D_init( pointer );
+
+					var buffer = Module.HEAPU8.buffer;
+
+					var offset = pointer;
+
+					offset += 3 * 8;
+
+					var quaternion = new Float64Array( buffer, offset, 4 );
+
+					this.pointer = pointer;
+
+					Object.defineProperties( this.quaternion, {
+
+						_x: {
+
+							get: function () {
+
+								return quaternion[ 0 ];
+
+							},
+
+							set: function ( value ) {
+
+								quaternion[ 0 ] = value;
+
+							}
+
+						},
+
+						_y: {
+
+							get: function () {
+
+								return quaternion[ 1 ];
+
+							},
+
+							set: function ( value ) {
+
+								quaternion[ 1 ] = value;
+
+							}
+
+						},
+
+						_z: {
+
+							get: function () {
+
+								return quaternion[ 2 ];
+
+							},
+
+							set: function ( value ) {
+
+								quaternion[ 2 ] = value;
+
+							}
+
+						},
+
+						_w: {
+
+							get: function () {
+
+								return quaternion[ 3 ];
+
+							},
+
+							set: function ( value ) {
+
+								quaternion[ 3 ] = value;
+
+							}
+
+						}
+
+					} );
+
+				}
+
+				THREE.WebGLRenderer = function ( params ) {
+
+					params = params || {};
+
+					var canvas = params.canvas;
+					var id = canvas.id;
+
+					var idPointer = Module._malloc( id.length + 1 );
+					Module.stringToUTF8( id, idPointer, id.length + 1 );
+
+					this.pointer = Module._malloc( Module.functions.sizeOfWebGLRenderer() );
+					Module.functions.WebGLRenderer_init( this.pointer, idPointer );
+
+				}
+
+				Object.assign( THREE.WebGLRenderer.prototype, {
+
+					clearColor( r, g, b, a ) {
+
+						Module.functions.WebGLRenderer_clearColor( this.pointer, 0.0, 0.0, 0.0, 1.0 );
+						return this;
+
+					},
+
+					setSize: function ( width, height ) {
+
+						Module.functions.WebGLRenderer_setSize( this.pointer, width, height );
+						return this;
+
+					},
+
+					render: function ( scene ) {
+
+						Module.functions.WebGLRenderer_render( this.pointer, scene.pointer );
+						return this;
+
+					}
+
+				}  );
+
+			}
+
+			function init() {
+
+				var id = 'wasmCanvas';
+				var width = 512;
+				var height = 512
+				var canvas = document.createElement( 'canvas' );
+				canvas.id = id;
+				canvas.width = width;
+				canvas.height = height;
+				document.body.appendChild( canvas );
+
+				renderer = new THREE.WebGLRenderer( {
+					canvas: canvas
+				} ).setSize( width, height ).clearColor( 0.0, 0.0, 0.0, 0.0 );
+
+				scene = new THREE.Object3D();
+
+			}
+
+			function animate() {
+
+				requestAnimationFrame( animate );
+
+				scene.rotation.y += 0.05;
+
+				renderer.render( scene );
+
+				stats.update();
+
+			}
+
+		</script>
+	</body>
+</html>
