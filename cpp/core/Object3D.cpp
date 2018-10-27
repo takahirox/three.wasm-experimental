@@ -12,6 +12,7 @@ Object3D* Object3D::add(
 	Object3D *child
 ) {
 	this->children.push_back(child);
+	child->parent = this;
 	return this;
 }
 
