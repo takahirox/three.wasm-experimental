@@ -21019,10 +21019,6 @@
 
 	function PerspectiveCamera( fov, aspect, near, far ) {
 
-		Camera.call( this );
-
-		this.type = 'PerspectiveCamera';
-
 		this.fov = fov !== undefined ? fov : 50;
 		this.zoom = 1;
 
@@ -21036,7 +21032,11 @@
 		this.filmGauge = 35;	// width of the film (default in millimeters)
 		this.filmOffset = 0;	// horizontal film offset (same unit as gauge)
 
+		Camera.call( this );
+
 		this.updateProjectionMatrix();
+
+		this.type = 'PerspectiveCamera';
 
 	}
 
@@ -22129,7 +22129,7 @@
 
 			// camera matrices cache
 
-			_projScreenMatrix = new Object3D().matrix,//new Matrix4(),
+			_projScreenMatrix = new Matrix4(),
 
 			_vector3 = new Vector3();
 
