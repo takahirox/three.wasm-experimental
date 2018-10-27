@@ -5,13 +5,37 @@
 #include <stdlib.h>
 #include <GLES2/gl2.h>
 #include <EGL/egl.h>
+#include <vector>
+#include <map>
 #include "../include/html5.h"
+#include "../math/Matrix4.h"
 #include "../core/Object3D.h"
+#include "../cameras/Camera.h"
 
 class WebGLRenderer {
 private:
+	Matrix4 projScreenMatrix;
+	std::vector<Object3D*> currentRenderList;
+
+	std::map<Object3D*, GLuint> tmpBufferMap;
+	std::map<Object3D*, Vector3*> tmpColorMap;
+
 	bool activateContext();
-	void renderObjects(Object3D *object);
+
+	void projectObject(
+		Object3D *object,
+		Camera *camera
+	);
+
+	void renderObjects(
+		std::vector<Object3D*> *renderList,
+		Camera *camera
+	);
+
+	void renderObject(
+		Object3D *object,
+		Camera *camera
+	);
 
 public:
 	char *id;
@@ -43,7 +67,8 @@ public:
 	WebGLRenderer* clear();
 
 	WebGLRenderer* render(
-		Object3D *scene
+		Object3D *scene,
+		Camera *camera
 	);
 };
 

@@ -66,7 +66,7 @@ GLuint loadShader(
 
 GLuint compileShader() {
 	GLbyte vertexShaderCode[] =  
-		"attribute vec4 position;\n"
+		"attribute vec3 position;\n"
 		"uniform mat4 modelMatrix;\n"
 		"uniform mat4 modelViewMatrix;\n"
 		"uniform mat4 projectionMatrix;\n"
@@ -75,14 +75,16 @@ GLuint compileShader() {
 		"uniform vec3 cameraPosition;\n"
 		"void main()\n"
 		"{\n"
-		"	gl_Position = modelMatrix * position;\n"
+		"	vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);"
+		"	gl_Position = projectionMatrix * mvPosition;\n"
 		"}\n";
 
 	GLbyte fragmentShaderCode[] =  
-		"precision mediump float;\n"\
+		"precision mediump float;\n"
+		"uniform vec3 color;\n"
 		"void main()\n"
 		"{\n"
-		"	gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);\n"
+		"	gl_FragColor = vec4(color, 1.0);\n"
 		"}\n";
 
 	GLuint vertexShader = loadShader(GL_VERTEX_SHADER, (char *)vertexShaderCode);
@@ -98,7 +100,9 @@ GLuint compileShader() {
 	glBindAttribLocation(program, 0, "position");
 	glLinkProgram(program);
 
-	printf("%d\n", glGetUniformLocation(program, "modelMatrix"));
+	printf("%d\n", glGetUniformLocation(program, "modelViewMatrix"));
+	printf("%d\n", glGetUniformLocation(program, "projectionMatrix"));
+	printf("%d\n", glGetUniformLocation(program, "color"));
 
 	GLint linked;
 
@@ -185,45 +189,137 @@ WebGLRenderer* WebGLRenderer::clear() {
 	return this;
 }
 
-void WebGLRenderer::renderObjects(
-	Object3D *object
+void WebGLRenderer::projectObject(
+	Object3D *object,
+	Camera *camera
 ) {
-	GLfloat vertices[] = {
-		 0.0,  0.5,  0.0,
-		-0.5, -0.5,  0.0,
-		 0.5, -0.5,  0.0
-	};
+	this->currentRenderList.push_back(object);
+
+	for(int i = 0, il = object->children.size(); i < il; ++i) {
+		this->projectObject(object->children[i], camera);
+	}
+}
+
+void WebGLRenderer::renderObjects(
+	std::vector<Object3D*> *renderList,
+	Camera *camera
+) {
+	for(int i = 0, il = renderList->size(); i < il; ++i) {
+		this->renderObject((*renderList)[i], camera);
+	}
+}
+
+void WebGLRenderer::renderObject(
+	Object3D *object,
+	Camera *camera
+) {
+	object->modelViewMatrix.multiplyMatrices(&camera->matrixWorldInverse,
+		&object->matrixWorld);
+	object->normalMatrix.getNormalMatrix(&object->modelViewMatrix);
 
 	GLuint vertexPosObject;
-	glGenBuffers(1, &vertexPosObject);
-	glBindBuffer(GL_ARRAY_BUFFER, vertexPosObject);
-	glBufferData(GL_ARRAY_BUFFER, 9 * 4, vertices, GL_STATIC_DRAW);
+	Vector3* color;
+
+	if(tmpBufferMap.count(object) == 0) {
+		GLfloat vertices[] = {
+			// front
+			-1.0, -1.0,  1.0,
+			 1.0, -1.0,  1.0,
+			 1.0,  1.0,  1.0,
+			-1.0,  1.0,  1.0,
+			// back
+			-1.0, -1.0, -1.0,
+			 1.0, -1.0, -1.0,
+			 1.0,  1.0, -1.0,
+			-1.0,  1.0, -1.0,
+		};
+
+		glGenBuffers(1, &vertexPosObject);
+		tmpBufferMap[object] = vertexPosObject;
+		glBindBuffer(GL_ARRAY_BUFFER, vertexPosObject);
+		glBufferData(GL_ARRAY_BUFFER, 3 * 8 * 4, vertices, GL_STATIC_DRAW);
+		color = new Vector3(
+			std::rand() / (double)RAND_MAX,
+			std::rand() / (double)RAND_MAX,
+			std::rand() / (double)RAND_MAX);
+		tmpColorMap[object] = color;
+
+		GLuint indicesObject;
+		GLushort indices[] = {
+			// front
+			0, 1, 2,
+			2, 3, 0,
+			// right
+			1, 5, 6,
+			6, 2, 1,
+			// back
+			7, 6, 5,
+			5, 4, 7,
+			// left
+			4, 0, 3,
+			3, 7, 4,
+			// bottom
+			4, 5, 1,
+			1, 0, 4,
+			// top
+			3, 2, 6,
+			6, 7, 3,
+		};
+		glGenBuffers(1, &indicesObject);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indicesObject);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, 3 * 12 * 2, indices, GL_STATIC_DRAW);
+	} else {
+		vertexPosObject = tmpBufferMap[object];
+		color = tmpColorMap[object];
+	}
+
 	glUseProgram(this->program);
 	glBindBuffer(GL_ARRAY_BUFFER, vertexPosObject);
-	glVertexAttribPointer(0, 3, GL_FLOAT, 0, 0, 0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
 	glEnableVertexAttribArray(0);
 
-	GLfloat elements[16];
-	for(int i = 0; i < 16; i++)
-		elements[i] = object->matrix.elements[i];
-	glUniformMatrix4fv(5, 1, GL_FALSE, elements);
-	glDrawArrays(GL_TRIANGLES, 0, 3);
+	GLfloat modelViewMatrixElements[16];
+	GLfloat projectionMatrixElements[16];
+	GLfloat colorElements[3];
+	for(int i = 0; i < 16; ++i) {
+		modelViewMatrixElements[i] = object->modelViewMatrix.elements[i];
+		projectionMatrixElements[i] = camera->projectionMatrix.elements[i];
+	}
+	colorElements[0] = color->x;
+	colorElements[1] = color->y;
+	colorElements[2] = color->z;
+	glUniformMatrix4fv(5, 1, GL_FALSE, modelViewMatrixElements);
+	glUniformMatrix4fv(6, 1, GL_FALSE, projectionMatrixElements);
+	glUniform3fv(7, 1, colorElements);
+
+	glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_SHORT, 0);
 }
 
 WebGLRenderer* WebGLRenderer::render(
-	Object3D *scene
+	Object3D *scene,
+	Camera *camera
 ) {
 	if(! this->initialized) {
 		this->program = compileShader();
 		this->initialized = true;
+
 	}
 
 	scene->updateMatrixWorld(false);
+	if(camera->parent == NULL) camera->updateMatrixWorld(false);
+
+	this->projScreenMatrix.multiplyMatrices(
+		&camera->projectionMatrix, &camera->matrixWorldInverse);
+
+	this->projectObject(scene, camera);
 
 	this->activateContext();
 	this->viewport(this->width, this->height);
 	this->clear();
-	this->renderObjects(scene);
+	glEnable(GL_DEPTH_TEST);
+	this->renderObjects(&this->currentRenderList, camera);
+
+	this->currentRenderList.clear();
 
 	return this;
 }
