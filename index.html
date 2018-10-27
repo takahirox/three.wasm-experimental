@@ -281,7 +281,7 @@
 
 					clearColor( r, g, b, a ) {
 
-						Module.functions.WebGLRenderer_clearColor( this.pointer, 0.0, 0.0, 0.0, 1.0 );
+						Module.functions.WebGLRenderer_clearColor( this.pointer, r, g, b, a );
 						return this;
 
 					},
@@ -317,7 +317,7 @@
 
 				renderer = new THREE.WebGLRenderer( {
 					canvas: canvas
-				} ).setSize( width, height ).clearColor( 0.0, 0.0, 0.0, 0.0 );
+				} ).setSize( width, height ).clearColor( 1.0, 1.0, 1.0, 1.0 );
 
 				scene = new THREE.Object3D();
 
