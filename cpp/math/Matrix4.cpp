@@ -154,3 +154,98 @@ Matrix4* Matrix4::compose(
 
 	return this;
 }
+
+Matrix4* Matrix4::getInverse(
+	Matrix4 *m
+) {
+	double n11 = m->elements[0];
+	double n21 = m->elements[1];
+	double n31 = m->elements[2];
+	double n41 = m->elements[3];
+	double n12 = m->elements[4];
+	double n22 = m->elements[5];
+	double n32 = m->elements[6];
+	double n42 = m->elements[7];
+	double n13 = m->elements[8];
+	double n23 = m->elements[9];
+	double n33 = m->elements[10];
+	double n43 = m->elements[11];
+	double n14 = m->elements[12];
+	double n24 = m->elements[13];
+	double n34 = m->elements[14];
+	double n44 = m->elements[15];
+
+	double t11 = n23 * n34 * n42 - n24 * n33 * n42 + n24 * n32 * n43 - n22 * n34 * n43 - n23 * n32 * n44 + n22 * n33 * n44;
+	double t12 = n14 * n33 * n42 - n13 * n34 * n42 - n14 * n32 * n43 + n12 * n34 * n43 + n13 * n32 * n44 - n12 * n33 * n44;
+	double t13 = n13 * n24 * n42 - n14 * n23 * n42 + n14 * n22 * n43 - n12 * n24 * n43 - n13 * n22 * n44 + n12 * n23 * n44;
+	double t14 = n14 * n23 * n32 - n13 * n24 * n32 - n14 * n22 * n33 + n12 * n24 * n33 + n13 * n22 * n34 - n12 * n23 * n34;
+
+	double det = n11 * t11 + n21 * t12 + n31 * t13 + n41 * t14;
+
+	if ( det == 0.0 ) {
+
+		// TODO: Error handling
+		return this;
+
+	}
+
+	double detInv = 1.0 / det;
+
+	this->elements[0] = t11 * detInv;
+	this->elements[1] = ( n24 * n33 * n41 - n23 * n34 * n41 - n24 * n31 * n43 + n21 * n34 * n43 + n23 * n31 * n44 - n21 * n33 * n44 ) * detInv;
+	this->elements[2] = ( n22 * n34 * n41 - n24 * n32 * n41 + n24 * n31 * n42 - n21 * n34 * n42 - n22 * n31 * n44 + n21 * n32 * n44 ) * detInv;
+	this->elements[3] = ( n23 * n32 * n41 - n22 * n33 * n41 - n23 * n31 * n42 + n21 * n33 * n42 + n22 * n31 * n43 - n21 * n32 * n43 ) * detInv;
+
+	this->elements[4] = t12 * detInv;
+	this->elements[5] = ( n13 * n34 * n41 - n14 * n33 * n41 + n14 * n31 * n43 - n11 * n34 * n43 - n13 * n31 * n44 + n11 * n33 * n44 ) * detInv;
+	this->elements[6] = ( n14 * n32 * n41 - n12 * n34 * n41 - n14 * n31 * n42 + n11 * n34 * n42 + n12 * n31 * n44 - n11 * n32 * n44 ) * detInv;
+	this->elements[7] = ( n12 * n33 * n41 - n13 * n32 * n41 + n13 * n31 * n42 - n11 * n33 * n42 - n12 * n31 * n43 + n11 * n32 * n43 ) * detInv;
+
+	this->elements[8] = t13 * detInv;
+	this->elements[9] = ( n14 * n23 * n41 - n13 * n24 * n41 - n14 * n21 * n43 + n11 * n24 * n43 + n13 * n21 * n44 - n11 * n23 * n44 ) * detInv;
+	this->elements[10] = ( n12 * n24 * n41 - n14 * n22 * n41 + n14 * n21 * n42 - n11 * n24 * n42 - n12 * n21 * n44 + n11 * n22 * n44 ) * detInv;
+	this->elements[11] = ( n13 * n22 * n41 - n12 * n23 * n41 - n13 * n21 * n42 + n11 * n23 * n42 + n12 * n21 * n43 - n11 * n22 * n43 ) * detInv;
+
+	this->elements[12] = t14 * detInv;
+	this->elements[13] = ( n13 * n24 * n31 - n14 * n23 * n31 + n14 * n21 * n33 - n11 * n24 * n33 - n13 * n21 * n34 + n11 * n23 * n34 ) * detInv;
+	this->elements[14] = ( n14 * n22 * n31 - n12 * n24 * n31 - n14 * n21 * n32 + n11 * n24 * n32 + n12 * n21 * n34 - n11 * n22 * n34 ) * detInv;
+	this->elements[15] = ( n12 * n23 * n31 - n13 * n22 * n31 + n13 * n21 * n32 - n11 * n23 * n32 - n12 * n21 * n33 + n11 * n22 * n33 ) * detInv;
+
+	return this;
+}
+
+Matrix4* Matrix4::makePerspective(
+	double left,
+	double right,
+	double top,
+	double bottom,
+	double near,
+	double far
+) {
+	double x = 2.0 * near / ( right - left );
+	double y = 2.0 * near / ( top - bottom );
+
+	double a = ( right + left ) / ( right - left );
+	double b = ( top + bottom ) / ( top - bottom );
+	double c = - ( far + near ) / ( far - near );
+	double d = - 2 * far * near / ( far - near );
+
+	this->elements[0] = x;
+	this->elements[4] = 0.0;
+	this->elements[8] = a;
+	this->elements[12] = 0.0;
+	this->elements[1] = 0.0;
+	this->elements[5] = y;
+	this->elements[9] = b;
+	this->elements[13] = 0.0;
+	this->elements[2] = 0.0;
+	this->elements[6] = 0.0;
+	this->elements[10] = c;
+	this->elements[14] = d;
+	this->elements[3] = 0.0;
+	this->elements[7] = 0.0;
+	this->elements[11] = -1.0;
+	this->elements[15] = 0.0;
+
+	return this;
+}

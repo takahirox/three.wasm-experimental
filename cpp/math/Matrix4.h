@@ -26,6 +26,19 @@ public:
 		Quaternion *quaternion,
 		Vector3 *scale
 	);
+
+	Matrix4* getInverse(
+		Matrix4 *m
+	);
+
+	Matrix4* makePerspective(
+		double left,
+		double right,
+		double top,
+		double bottom,
+		double near,
+		double far
+	);
 };
 
 #endif
