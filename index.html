@@ -1,9 +1,19 @@
 ﻿<html>
 	<head>
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<style>
+			body {
+				background:#fff;
+				padding:0;
+				margin:0;
+				font-weight: bold;
+				overflow:hidden;
+			}
+		</style>
 	</head>
 	<body>
 		<script src="three/three.js"></script>
-		<script src="WebGLRenderer.js"></script>
+		<script src="three-wasm.js"></script>
 		<script src="libs/stats.min.js"></script>
 
 		<script>
@@ -17,7 +27,7 @@
 
 			}, 1000 );
 
-			var renderer, scene;
+			var renderer, scene, camera;
 			var stats = new Stats();
 
 			document.body.appendChild( stats.dom );
@@ -34,6 +44,12 @@
 					[]
 				);
 
+				Module.functions.sizeOfPerspectiveCamera = Module.cwrap(
+					'sizeOfPerspectiveCamera',
+					'number',
+					[]
+				);
+
 				Module.functions.sizeOfWebGLRenderer = Module.cwrap(
 					'sizeOfWebGLRenderer',
 					'number',
@@ -42,6 +58,18 @@
 
 				Module.functions.Object3D_init = Module.cwrap(
 					'Object3D_init',
+					'number',
+					['number']
+				);
+
+				Module.functions.Object3D_add = Module.cwrap(
+					'Object3D_add',
+					'number',
+					['number', 'number']
+				);
+
+				Module.functions.PerspectiveCamera_init = Module.cwrap(
+					'PerspectiveCamera_init',
 					'number',
 					['number']
 				);
@@ -67,7 +95,7 @@
 				Module.functions.WebGLRenderer_render = Module.cwrap(
 					'WebGLRenderer_render',
 					'void',
-					[ 'number' ]
+					[ 'number', 'number' ]
 				);
 
 			}
@@ -76,18 +104,76 @@
 
 				THREE.Object3D.prototype.init = function () {
 
-					var pointer = Module._malloc( Module.functions.sizeOfObject3D() );
-					Module.functions.Object3D_init( pointer );
+					this.pointer = Module._malloc( Module.functions.sizeOfObject3D() );
+					Module.functions.Object3D_init( this.pointer );
+					this.mapWasm();
 
+				};
+
+				THREE.Object3D.prototype.mapWasm = function () {
+
+					var pointer = this.pointer;
 					var buffer = Module.HEAPU8.buffer;
 
 					var offset = pointer;
 
+					var position = new Float64Array( buffer, offset, 3 );
 					offset += 3 * 8;
 
 					var quaternion = new Float64Array( buffer, offset, 4 );
+					offset += 4 * 6;
 
-					this.pointer = pointer;
+					Object.defineProperties( this.position, {
+
+						x: {
+
+							get: function () {
+
+								return position[ 0 ];
+
+							},
+
+							set: function ( value ) {
+
+								position[ 0 ] = value;
+
+							}
+
+						},
+
+						y: {
+
+							get: function () {
+
+								return position[ 1 ];
+
+							},
+
+							set: function ( value ) {
+
+								position[ 1 ] = value;
+
+							}
+
+						},
+
+						z: {
+
+							get: function () {
+
+								return position[ 2 ];
+
+							},
+
+							set: function ( value ) {
+
+								position[ 2 ] = value;
+
+							}
+
+						}
+
+					} );
 
 					Object.defineProperties( this.quaternion, {
 
@@ -159,6 +245,23 @@
 
 				}
 
+				THREE.Object3D.prototype._add = THREE.Object3D.prototype.add;
+				THREE.Object3D.prototype.add = function ( child ) {
+
+					this._add( child );
+					Module.functions.Object3D_add( this.pointer, child.pointer );
+					return this;
+
+				};
+
+				THREE.PerspectiveCamera.prototype.init = function () {
+
+					this.pointer = Module._malloc( Module.functions.sizeOfPerspectiveCamera() );
+					Module.functions.PerspectiveCamera_init( this.pointer, this.fov, this.aspect, this.near, this.far );
+					this.mapWasm();
+
+				};
+
 				THREE.WebGLRenderer = function ( params ) {
 
 					params = params || {};
@@ -190,9 +293,9 @@
 
 					},
 
-					render: function ( scene ) {
+					render: function ( scene, camera ) {
 
-						Module.functions.WebGLRenderer_render( this.pointer, scene.pointer );
+						Module.functions.WebGLRenderer_render( this.pointer, scene.pointer, camera.pointer );
 						return this;
 
 					}
@@ -204,8 +307,8 @@
 			function init() {
 
 				var id = 'wasmCanvas';
-				var width = 512;
-				var height = 512
+				var width = window.innerWidth;
+				var height = window.innerHeight;
 				var canvas = document.createElement( 'canvas' );
 				canvas.id = id;
 				canvas.width = width;
@@ -218,15 +321,39 @@
 
 				scene = new THREE.Object3D();
 
+				camera = new THREE.PerspectiveCamera( 60, width / height, 0.01, 2000 );
+				camera.position.z = 30.0;
+
+				for ( var i = 0; i < 300; i ++ ) {
+
+					var object = new THREE.Object3D();
+					object.position.x = Math.random() * 50.0 - 25.0;
+					object.position.y = Math.random() * 50.0 - 25.0;
+					object.position.z = Math.random() * 50.0 - 25.0;
+					object.rotation.y = Math.random() * 2.0 * Math.PI;
+					object.rotation.z = Math.random() * 2.0 * Math.PI;
+					scene.add( object );
+
+				}
+
 			}
 
 			function animate() {
 
 				requestAnimationFrame( animate );
 
-				scene.rotation.y += 0.05;
+				scene.rotation.x += 0.002;
+				scene.rotation.y += 0.004;
 
-				renderer.render( scene );
+				for ( var i = 0, il = scene.children.length; i < il; i ++ ) {
+
+					var child = scene.children[ i ];
+					child.rotation.x += 0.02;
+					child.rotation.y += 0.04;
+
+				}
+
+				renderer.render( scene, camera );
 
 				stats.update();
 
