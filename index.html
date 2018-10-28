@@ -50,6 +50,12 @@
 					[]
 				);
 
+				Module.functions.sizeOfScene = Module.cwrap(
+					'sizeOfScene',
+					'number',
+					[]
+				);
+
 				Module.functions.sizeOfPerspectiveCamera = Module.cwrap(
 					'sizeOfPerspectiveCamera',
 					'number',
@@ -72,6 +78,12 @@
 					'Object3D_add',
 					'number',
 					['number', 'number']
+				);
+
+				Module.functions.Scene_init = Module.cwrap(
+					'Scene_init',
+					'number',
+					['number']
 				);
 
 				Module.functions.PerspectiveCamera_init = Module.cwrap(
@@ -260,6 +272,14 @@
 
 				};
 
+				THREE.Scene.prototype.init = function () {
+
+					this.pointer = Module._malloc( Module.functions.sizeOfScene() );
+					Module.functions.Scene_init( this.pointer );
+					this.mapWasm();
+
+				};
+
 				THREE.PerspectiveCamera.prototype.init = function () {
 
 					this.pointer = Module._malloc( Module.functions.sizeOfPerspectiveCamera() );
@@ -325,7 +345,7 @@
 					canvas: canvas
 				} ).setSize( width, height ).clearColor( 1.0, 1.0, 1.0, 1.0 );
 
-				scene = new THREE.Object3D();
+				scene = new THREE.Scene();
 
 				camera = new THREE.PerspectiveCamera( 60, width / height, 0.01, 2000 );
 				camera.position.z = 30.0;
@@ -338,6 +358,7 @@
 					object.position.z = Math.random() * 50.0 - 25.0;
 					object.rotation.y = Math.random() * 2.0 * Math.PI;
 					object.rotation.z = Math.random() * 2.0 * Math.PI;
+					object.scale.x = object.scale.y = object.scale.z = Math.random() * 0.5 + 0.5;
 					scene.add( object );
 
 				}
