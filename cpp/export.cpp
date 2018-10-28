@@ -1,4 +1,5 @@
 ﻿#include "./core/Object3D.h"
+#include "./scenes/Scene.h"
 #include "./cameras/PerspectiveCamera.h"
 #include "./renderer/WebGLRenderer.h"
 
@@ -15,6 +16,10 @@ extern "C" {
 		return sizeof(WebGLRenderer);
 	}
 
+	int sizeOfScene() {
+		return sizeof(Scene);
+	}
+
 	Object3D* Object3D_init(
 		Object3D *object
 	) {
@@ -26,6 +31,12 @@ extern "C" {
 		Object3D *child
 	) {
 		return object->add(child);
+	}
+
+	Scene* Scene_init(
+		Scene *scene
+	) {
+		return new(scene) Scene();
 	}
 
 	PerspectiveCamera* PerspectiveCamera_init(
