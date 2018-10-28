@@ -50,3 +50,12 @@ Vector3* Vector3::applyMatrix4(
 	this->z = (m->elements[2] * x + m->elements[6] * y + m->elements[10] * z + m->elements[14]) * w;
 	return this;
 }
+
+Vector3* Vector3::setFromMatrixPosition(
+	Matrix4 *m
+) {
+	this->x = m->elements[12];
+	this->y = m->elements[13];
+	this->z = m->elements[14];
+	return this;
+}

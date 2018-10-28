@@ -36,6 +36,10 @@ public:
 	Vector3* applyMatrix4(
 		Matrix4 *m
 	);
+
+	Vector3* setFromMatrixPosition(
+		Matrix4 *m
+	);
 };
 
 #endif
