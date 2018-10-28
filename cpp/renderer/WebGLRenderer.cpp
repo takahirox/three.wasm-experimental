@@ -1,4 +1,5 @@
 ﻿#include <stdlib.h>
+#include <algorithm>
 #include "WebGLRenderer.h"
 
 bool validEmscriptenResult(
@@ -193,7 +194,12 @@ void WebGLRenderer::projectObject(
 	Object3D *object,
 	Camera *camera
 ) {
-	this->currentRenderList.push_back(object);
+	this->tmpVector3.setFromMatrixPosition(&object->matrixWorld)
+		->applyMatrix4(&this->projScreenMatrix);
+	struct RenderEntry entry;
+	entry.object = object;
+	entry.z = this->tmpVector3.z;
+	this->currentRenderList.push_back(entry);
 
 	for(int i = 0, il = object->children.size(); i < il; ++i) {
 		this->projectObject(object->children[i], camera);
@@ -201,11 +207,11 @@ void WebGLRenderer::projectObject(
 }
 
 void WebGLRenderer::renderObjects(
-	std::vector<Object3D*> *renderList,
+	std::vector<RenderEntry> *renderList,
 	Camera *camera
 ) {
 	for(int i = 0, il = renderList->size(); i < il; ++i) {
-		this->renderObject((*renderList)[i], camera);
+		this->renderObject((*renderList)[i].object, camera);
 	}
 }
 
@@ -268,15 +274,14 @@ void WebGLRenderer::renderObject(
 		glGenBuffers(1, &indicesObject);
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indicesObject);
 		glBufferData(GL_ELEMENT_ARRAY_BUFFER, 3 * 12 * 2, indices, GL_STATIC_DRAW);
+		glUseProgram(this->program);
+		glBindBuffer(GL_ARRAY_BUFFER, vertexPosObject);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+		glEnableVertexAttribArray(0);
 	} else {
 		vertexPosObject = tmpBufferMap[object];
 		color = tmpColorMap[object];
 	}
-
-	glUseProgram(this->program);
-	glBindBuffer(GL_ARRAY_BUFFER, vertexPosObject);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-	glEnableVertexAttribArray(0);
 
 	GLfloat modelViewMatrixElements[16];
 	GLfloat projectionMatrixElements[16];
@@ -295,6 +300,12 @@ void WebGLRenderer::renderObject(
 	glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_SHORT, 0);
 }
 
+struct painterSort {
+	inline bool operator() (RenderEntry entry1, RenderEntry entry2) {
+		return entry1.z < entry2.z;
+	}
+};
+
 WebGLRenderer* WebGLRenderer::render(
 	Object3D *scene,
 	Camera *camera
@@ -302,7 +313,10 @@ WebGLRenderer* WebGLRenderer::render(
 	if(! this->initialized) {
 		this->program = compileShader();
 		this->initialized = true;
-
+		this->activateContext();
+		this->viewport(this->width, this->height);
+		glEnable(GL_DEPTH_TEST);
+		glCullFace(GL_BACK);
 	}
 
 	scene->updateMatrixWorld(false);
@@ -312,11 +326,10 @@ WebGLRenderer* WebGLRenderer::render(
 		&camera->projectionMatrix, &camera->matrixWorldInverse);
 
 	this->projectObject(scene, camera);
+	std::sort(this->currentRenderList.begin(), this->currentRenderList.end(),
+		painterSort());
 
-	this->activateContext();
-	this->viewport(this->width, this->height);
 	this->clear();
-	glEnable(GL_DEPTH_TEST);
 	this->renderObjects(&this->currentRenderList, camera);
 
 	this->currentRenderList.clear();

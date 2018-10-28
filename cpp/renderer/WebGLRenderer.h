@@ -12,13 +12,19 @@
 #include "../core/Object3D.h"
 #include "../cameras/Camera.h"
 
+struct RenderEntry {
+	Object3D* object;
+	double z;
+};
+
 class WebGLRenderer {
 private:
 	Matrix4 projScreenMatrix;
-	std::vector<Object3D*> currentRenderList;
+	std::vector<RenderEntry> currentRenderList;
 
 	std::map<Object3D*, GLuint> tmpBufferMap;
 	std::map<Object3D*, Vector3*> tmpColorMap;
+	Vector3 tmpVector3;
 
 	bool activateContext();
 
@@ -28,7 +34,7 @@ private:
 	);
 
 	void renderObjects(
-		std::vector<Object3D*> *renderList,
+		std::vector<RenderEntry> *renderList,
 		Camera *camera
 	);
 
