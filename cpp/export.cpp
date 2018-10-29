@@ -1,7 +1,9 @@
-﻿#include "./core/BufferAttribute.h"
+﻿#include "./math/Vector3.h"
+#include "./core/BufferAttribute.h"
 #include "./core/Object3D.h"
 #include "./geometries/BufferGeometry.h"
 #include "./objects/Mesh.h"
+#include "./materials/Materials.h"
 #include "./scenes/Scene.h"
 #include "./cameras/PerspectiveCamera.h"
 #include "./renderer/WebGLRenderer.h"
@@ -9,6 +11,10 @@
 // TODO: Replace with EMSCRIPTEN_BINDINGS?
 
 extern "C" {
+	int sizeOfVector3() {
+		return sizeof(Vector3);
+	}
+
 	int sizeOfBufferAttribute() {
 		return sizeof(BufferAttribute);
 	}
@@ -25,6 +31,10 @@ extern "C" {
 		return sizeof(Mesh);
 	}
 
+	int sizeOfMeshBasicMaterial() {
+		return sizeof(MeshBasicMaterial);
+	}
+
 	int sizeOfPerspectiveCamera() {
 		return sizeof(PerspectiveCamera);
 	}
@@ -35,6 +45,15 @@ extern "C" {
 
 	int sizeOfScene() {
 		return sizeof(Scene);
+	}
+
+	Vector3* Vector3_init(
+		Vector3* v,
+		double x,
+		double y,
+		double z
+	) {
+		return new(v) Vector3(x, y, z);
 	}
 
 	BufferAttribute* BufferAttribute_init(
@@ -92,9 +111,17 @@ extern "C" {
 
 	Mesh* Mesh_init(
 		Mesh* mesh,
-		BufferGeometry *geometry
+		BufferGeometry *geometry,
+		Material *material
 	) {
-		return new(mesh) Mesh(geometry);
+		return new(mesh) Mesh(geometry, material);
+	}
+
+	MeshBasicMaterial* MeshBasicMaterial_init(
+		MeshBasicMaterial *material,
+		Vector3 *color
+	) {
+		return new(material) MeshBasicMaterial(color);
 	}
 
 	Scene* Scene_init(
