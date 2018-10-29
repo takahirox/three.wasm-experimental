@@ -9,6 +9,7 @@
 #include "../include/html5.h"
 #include "../math/Matrix4.h"
 #include "../core/Object3D.h"
+#include "../materials/Materials.h"
 #include "../objects/Mesh.h"
 #include "../scenes/Scene.h"
 #include "../cameras/Camera.h"
@@ -16,7 +17,7 @@
 #include "./webgl/WebGLGeometries.h"
 #include "./webgl/WebGLIndexedBufferRenderer.h"
 
-struct RenderEntry {
+struct RenderItem {
 	Object3D* object;
 	double z;
 };
@@ -24,13 +25,12 @@ struct RenderEntry {
 class WebGLRenderer {
 private:
 	Matrix4 projScreenMatrix;
-	std::vector<RenderEntry> currentRenderList;
+	std::vector<RenderItem> currentRenderList;
 	WebGLAttributes *attributes;
 	WebGLGeometries *geometries;
 	WebGLIndexedBufferRenderer renderer;
 	BufferGeometry *currentGeometry;
 	Vector3 tmpVector3;
-	std::map<Object3D*, Vector3*> tmpColorMap;
 
 	bool activateContext();
 
@@ -40,7 +40,7 @@ private:
 	);
 
 	void renderObjects(
-		std::vector<RenderEntry> *renderList,
+		std::vector<RenderItem> *renderList,
 		Scene *scene,
 		Camera *camera
 	);

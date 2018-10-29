@@ -200,7 +200,7 @@ void WebGLRenderer::projectObject(
 	if(object->type() == MeshType) {
 		this->tmpVector3.setFromMatrixPosition(&object->matrixWorld)
 			->applyMatrix4(&this->projScreenMatrix);
-		struct RenderEntry entry;
+		struct RenderItem entry;
 		entry.object = object;
 		entry.z = this->tmpVector3.z;
 		this->currentRenderList.push_back(entry);
@@ -213,7 +213,7 @@ void WebGLRenderer::projectObject(
 }
 
 void WebGLRenderer::renderObjects(
-	std::vector<RenderEntry> *renderList,
+	std::vector<RenderItem> *renderList,
 	Scene *scene,
 	Camera *camera
 ) {
@@ -232,6 +232,7 @@ void WebGLRenderer::renderObject(
 
 	Mesh *mesh = (Mesh*)object;
 	BufferGeometry *geometry = mesh->geometry;
+	Material *material = mesh->material;
 
 	if(this->currentGeometry != geometry) {
 		glUseProgram(this->program);
@@ -248,16 +249,7 @@ void WebGLRenderer::renderObject(
 		this->currentGeometry = geometry;
 	}
 
-	Vector3 *color;
-	if(this->tmpColorMap.count(object) == 0) {
-		color = new Vector3(
-			std::rand() / (double)RAND_MAX,
-			std::rand() / (double)RAND_MAX,
-			std::rand() / (double)RAND_MAX);
-		this->tmpColorMap[object] = color;
-	} else {
-		color = this->tmpColorMap[object];
-	}
+	Vector3 *color = &((MeshBasicMaterial*)material)->color;
 
 	int drawStart = 0;
 	int drawCount = 0;
@@ -289,7 +281,7 @@ void WebGLRenderer::renderObject(
 }
 
 struct painterSort {
-	inline bool operator() (RenderEntry entry1, RenderEntry entry2) {
+	inline bool operator() (RenderItem entry1, RenderItem entry2) {
 		return entry1.z < entry2.z;
 	}
 };
