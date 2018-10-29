@@ -9,6 +9,11 @@
 #include "../math/Matrix3.h"
 #include "../math/Matrix4.h"
 
+enum ObjectType {
+	Object3DType,
+	MeshType
+};
+
 class Object3D {
 public:
 	Vector3 position;
@@ -30,13 +35,15 @@ public:
 
 	Object3D();
 
+	virtual ObjectType type() { return Object3DType; }
+
 	Object3D* add(
 		Object3D *child
 	);
 
 	Object3D* updateMatrix();
 
-	Object3D* updateMatrixWorld(
+	virtual Object3D* updateMatrixWorld(
 		bool force
 	);
 };
