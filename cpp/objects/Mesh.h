@@ -3,15 +3,16 @@
 
 #include "../core/Object3D.h"
 #include "../geometries/BufferGeometry.h"
-
-#include <stdio.h>
+#include "../materials/Material.h"
 
 class Mesh : public Object3D {
 public:
 	BufferGeometry *geometry;
+	Material *material;
 
 	Mesh(
-		BufferGeometry *_geometry
+		BufferGeometry *_geometry,
+		Material *_material
 	);
 
 	virtual ObjectType type() { return MeshType; }
