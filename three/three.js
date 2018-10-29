@@ -14112,6 +14112,8 @@
 
 		this.setValues( parameters );
 
+		this.init();
+
 	}
 
 	MeshBasicMaterial.prototype = Object.create( Material.prototype );
@@ -14153,6 +14155,8 @@
 		return this;
 
 	};
+
+	MeshBasicMaterial.prototype.init = function () {};
 
 	/**
 	 * @author mrdoob / http://mrdoob.com/
