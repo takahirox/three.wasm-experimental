@@ -44,6 +44,12 @@
 
 				Module.functions = {};
 
+				Module.functions.sizeOfVector3 = Module.cwrap(
+					'sizeOfVector3',
+					'number',
+					[]
+				);
+
 				Module.functions.sizeOfBufferAttribute = Module.cwrap(
 					'sizeOfBufferAttribute',
 					'number',
@@ -68,6 +74,12 @@
 					[]
 				);
 
+				Module.functions.sizeOfMeshBasicMaterial = Module.cwrap(
+					'sizeOfMeshBasicMaterial',
+					'number',
+					[]
+				);
+
 				Module.functions.sizeOfScene = Module.cwrap(
 					'sizeOfScene',
 					'number',
@@ -84,6 +96,12 @@
 					'sizeOfWebGLRenderer',
 					'number',
 					[]
+				);
+
+				Module.functions.Vector3_init = Module.cwrap(
+					'Vector3_init',
+					'number',
+					['number', 'number', 'number', 'number']
 				);
 
 				Module.functions.BufferAttribute_init = Module.cwrap(
@@ -118,6 +136,12 @@
 
 				Module.functions.Mesh_init = Module.cwrap(
 					'Mesh_init',
+					'number',
+					['number', 'number', 'number']
+				);
+
+				Module.functions.MeshBasicMaterial_init = Module.cwrap(
+					'MeshBasicMaterial_init',
 					'number',
 					['number', 'number']
 				);
@@ -329,7 +353,7 @@
 				THREE.Mesh.prototype.init = function () {
 
 					this.pointer = Module._malloc( Module.functions.sizeOfMesh() );
-					Module.functions.Mesh_init( this.pointer, this.geometry.pointer );
+					Module.functions.Mesh_init( this.pointer, this.geometry.pointer, this.material.pointer );
 					this.mapWasm();
 
 				};
@@ -347,6 +371,17 @@
 					this.pointer = Module._malloc( Module.functions.sizeOfPerspectiveCamera() );
 					Module.functions.PerspectiveCamera_init( this.pointer, this.fov, this.aspect, this.near, this.far );
 					this.mapWasm();
+
+				};
+
+				THREE.MeshBasicMaterial.prototype.init = function () {
+
+					var vector3Pointer = Module._malloc( Module.functions.sizeOfVector3() );
+					var vector3Array = new Float64Array( Module.HEAPU8.buffer, vector3Pointer, 3 );
+					this.color.toArray( vector3Array );
+					this.pointer = Module._malloc( Module.functions.sizeOfMeshBasicMaterial() );
+					Module.functions.MeshBasicMaterial_init( this.pointer, vector3Pointer );
+					Module._free( vector3Pointer );
 
 				};
 
@@ -470,7 +505,15 @@
 
 				for ( var i = 0; i < 300; i ++ ) {
 
-					var mesh = new THREE.Mesh( geometries[ i % geometries.length ], material );
+					var color = new THREE.Color();
+					color.r = Math.random();
+					color.g = Math.random();
+					color.b = Math.random();
+
+					var mesh = new THREE.Mesh(
+						geometries[ i % geometries.length ],
+						new THREE.MeshBasicMaterial( { color: color } )
+					);
 					mesh.position.x = Math.random() * 50.0 - 25.0;
 					mesh.position.y = Math.random() * 50.0 - 25.0;
 					mesh.position.z = Math.random() * 50.0 - 25.0;
