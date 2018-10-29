@@ -130,7 +130,7 @@ GLuint compileShader() {
 
 WebGLRenderer::WebGLRenderer(
 	char *_id
-): id(_id), initialized(false) {
+): id(_id), currentGeometry(NULL), initialized(false) {
 	printf( "Context creation for %s\n", id );
 
 	EmscriptenWebGLContextAttributes attrs;
@@ -151,6 +151,9 @@ WebGLRenderer::WebGLRenderer(
 	if (! this->activateContext()) {
 		return;
 	}
+
+	this->attributes = new WebGLAttributes();
+	this->geometries = new WebGLGeometries(this->attributes);
 }
 
 bool WebGLRenderer::activateContext() {
@@ -194,12 +197,15 @@ void WebGLRenderer::projectObject(
 	Object3D *object,
 	Camera *camera
 ) {
-	this->tmpVector3.setFromMatrixPosition(&object->matrixWorld)
-		->applyMatrix4(&this->projScreenMatrix);
-	struct RenderEntry entry;
-	entry.object = object;
-	entry.z = this->tmpVector3.z;
-	this->currentRenderList.push_back(entry);
+	if(object->type() == MeshType) {
+		this->tmpVector3.setFromMatrixPosition(&object->matrixWorld)
+			->applyMatrix4(&this->projScreenMatrix);
+		struct RenderEntry entry;
+		entry.object = object;
+		entry.z = this->tmpVector3.z;
+		this->currentRenderList.push_back(entry);
+		this->geometries->update(((Mesh*)object)->geometry);
+	}
 
 	for(int i = 0, il = object->children.size(); i < il; ++i) {
 		this->projectObject(object->children[i], camera);
@@ -208,6 +214,7 @@ void WebGLRenderer::projectObject(
 
 void WebGLRenderer::renderObjects(
 	std::vector<RenderEntry> *renderList,
+	Scene *scene,
 	Camera *camera
 ) {
 	for(int i = 0, il = renderList->size(); i < il; ++i) {
@@ -223,64 +230,45 @@ void WebGLRenderer::renderObject(
 		&object->matrixWorld);
 	object->normalMatrix.getNormalMatrix(&object->modelViewMatrix);
 
-	GLuint vertexPosObject;
-	Vector3* color;
+	Mesh *mesh = (Mesh*)object;
+	BufferGeometry *geometry = mesh->geometry;
 
-	if(tmpBufferMap.count(object) == 0) {
-		GLfloat vertices[] = {
-			// front
-			-1.0, -1.0,  1.0,
-			 1.0, -1.0,  1.0,
-			 1.0,  1.0,  1.0,
-			-1.0,  1.0,  1.0,
-			// back
-			-1.0, -1.0, -1.0,
-			 1.0, -1.0, -1.0,
-			 1.0,  1.0, -1.0,
-			-1.0,  1.0, -1.0,
-		};
+	if(this->currentGeometry != geometry) {
+		glUseProgram(this->program);
 
-		glGenBuffers(1, &vertexPosObject);
-		tmpBufferMap[object] = vertexPosObject;
-		glBindBuffer(GL_ARRAY_BUFFER, vertexPosObject);
-		glBufferData(GL_ARRAY_BUFFER, 3 * 8 * 4, vertices, GL_STATIC_DRAW);
+		for(std::map<std::string, BufferAttribute*>::iterator it =
+			mesh->geometry->attributes.begin();
+			it != mesh->geometry->attributes.end(); ++it) {
+			if(it->first.compare("position") == 0){
+				glBindBuffer(GL_ARRAY_BUFFER, this->attributes->get(it->second).buffer);
+				glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+				glEnableVertexAttribArray(0);
+			}
+		}
+		this->currentGeometry = geometry;
+	}
+
+	Vector3 *color;
+	if(this->tmpColorMap.count(object) == 0) {
 		color = new Vector3(
 			std::rand() / (double)RAND_MAX,
 			std::rand() / (double)RAND_MAX,
 			std::rand() / (double)RAND_MAX);
-		tmpColorMap[object] = color;
-
-		GLuint indicesObject;
-		GLushort indices[] = {
-			// front
-			0, 1, 2,
-			2, 3, 0,
-			// right
-			1, 5, 6,
-			6, 2, 1,
-			// back
-			7, 6, 5,
-			5, 4, 7,
-			// left
-			4, 0, 3,
-			3, 7, 4,
-			// bottom
-			4, 5, 1,
-			1, 0, 4,
-			// top
-			3, 2, 6,
-			6, 7, 3,
-		};
-		glGenBuffers(1, &indicesObject);
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indicesObject);
-		glBufferData(GL_ELEMENT_ARRAY_BUFFER, 3 * 12 * 2, indices, GL_STATIC_DRAW);
-		glUseProgram(this->program);
-		glBindBuffer(GL_ARRAY_BUFFER, vertexPosObject);
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-		glEnableVertexAttribArray(0);
+		this->tmpColorMap[object] = color;
 	} else {
-		vertexPosObject = tmpBufferMap[object];
-		color = tmpColorMap[object];
+		color = this->tmpColorMap[object];
+	}
+
+	int drawStart = 0;
+	int drawCount = 0;
+
+	if(mesh->geometry->index != NULL) {
+		this->renderer.setIndex(mesh->geometry->index);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,
+			this->attributes->get(geometry->index).buffer);
+		drawCount = mesh->geometry->index->count;
+	} else {
+		drawCount = mesh->geometry->getAttribute("position")->count;
 	}
 
 	GLfloat modelViewMatrixElements[16];
@@ -297,7 +285,7 @@ void WebGLRenderer::renderObject(
 	glUniformMatrix4fv(6, 1, GL_FALSE, projectionMatrixElements);
 	glUniform3fv(7, 1, colorElements);
 
-	glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_SHORT, 0);
+	this->renderer.render(drawStart, drawCount);
 }
 
 struct painterSort {
@@ -307,7 +295,7 @@ struct painterSort {
 };
 
 WebGLRenderer* WebGLRenderer::render(
-	Object3D *scene,
+	Scene *scene,
 	Camera *camera
 ) {
 	if(! this->initialized) {
@@ -330,7 +318,7 @@ WebGLRenderer* WebGLRenderer::render(
 		painterSort());
 
 	this->clear();
-	this->renderObjects(&this->currentRenderList, camera);
+	this->renderObjects(&this->currentRenderList, scene, camera);
 
 	this->currentRenderList.clear();
 
