@@ -44,8 +44,26 @@
 
 				Module.functions = {};
 
+				Module.functions.sizeOfBufferAttribute = Module.cwrap(
+					'sizeOfBufferAttribute',
+					'number',
+					[]
+				);
+
+				Module.functions.sizeOfBufferGeometry = Module.cwrap(
+					'sizeOfBufferGeometry',
+					'number',
+					[]
+				);
+
 				Module.functions.sizeOfObject3D = Module.cwrap(
 					'sizeOfObject3D',
+					'number',
+					[]
+				);
+
+				Module.functions.sizeOfMesh = Module.cwrap(
+					'sizeOfMesh',
 					'number',
 					[]
 				);
@@ -68,16 +86,52 @@
 					[]
 				);
 
+				Module.functions.BufferAttribute_init = Module.cwrap(
+					'BufferAttribute_init',
+					'number',
+					['number', 'number', 'number', 'number', 'number']
+				);
+
+				Module.functions.BufferGeometry_init = Module.cwrap(
+					'BufferGeometry_init',
+					'number',
+					['number']
+				);
+
+				Module.functions.BufferGeometry_setIndex = Module.cwrap(
+					'BufferGeometry_setIndex',
+					'number',
+					['number', 'number']
+				);
+
+				Module.functions.BufferGeometry_addAttribute = Module.cwrap(
+					'BufferGeometry_addAttribute',
+					'number',
+					['number', 'number', 'number']
+				);
+
 				Module.functions.Object3D_init = Module.cwrap(
 					'Object3D_init',
 					'number',
 					['number']
 				);
 
+				Module.functions.Mesh_init = Module.cwrap(
+					'Mesh_init',
+					'number',
+					['number', 'number']
+				);
+
 				Module.functions.Object3D_add = Module.cwrap(
 					'Object3D_add',
 					'number',
 					['number', 'number']
+				);
+
+				Module.functions.Object3D_getPositionPointer = Module.cwrap(
+					'Object3D_getPositionPointer',
+					'number',
+					['number']
 				);
 
 				Module.functions.Scene_init = Module.cwrap(
@@ -133,7 +187,7 @@
 					var pointer = this.pointer;
 					var buffer = Module.HEAPU8.buffer;
 
-					var offset = pointer;
+					var offset = Module.functions.Object3D_getPositionPointer( pointer );
 
 					var position = new Float64Array( buffer, offset, 3 );
 					offset += 3 * 8;
@@ -272,6 +326,14 @@
 
 				};
 
+				THREE.Mesh.prototype.init = function () {
+
+					this.pointer = Module._malloc( Module.functions.sizeOfMesh() );
+					Module.functions.Mesh_init( this.pointer, this.geometry.pointer );
+					this.mapWasm();
+
+				};
+
 				THREE.Scene.prototype.init = function () {
 
 					this.pointer = Module._malloc( Module.functions.sizeOfScene() );
@@ -288,6 +350,47 @@
 
 				};
 
+				THREE.BufferAttribute.prototype.init = function () {
+
+					this.pointer = Module._malloc( Module.functions.sizeOfBufferAttribute() );
+					var arrayPointer = Module._malloc( this.array.byteLength );
+					var typedArray = new this.array.constructor( Module.HEAPU8.buffer, arrayPointer, this.array.length );
+					typedArray.set( this.array );
+					Module.functions.BufferAttribute_init(
+						this.pointer,
+						arrayPointer,
+						this.array.constructor === Float32Array ? 0 : 1,
+						this.array.byteLength,
+						this.itemSize
+					);
+
+				};
+
+				THREE.BufferGeometry.prototype.init = function () {
+
+					this.pointer = Module._malloc( Module.functions.sizeOfBufferGeometry() );
+					Module.functions.BufferGeometry_init( this.pointer );
+
+				};
+
+				THREE.BufferGeometry.prototype._addAttribute = THREE.BufferGeometry.prototype.addAttribute;
+				THREE.BufferGeometry.prototype.addAttribute = function ( name, attribute ) {
+
+					this._addAttribute( name, attribute );
+					Module.functions.BufferGeometry_addAttribute( this.pointer, stringsToPointer( name ), attribute.pointer );
+					return this;
+
+				};
+
+				THREE.BufferGeometry.prototype._setIndex = THREE.BufferGeometry.prototype.setIndex;
+				THREE.BufferGeometry.prototype.setIndex = function ( index ) {
+
+					this._setIndex( index );
+					Module.functions.BufferGeometry_setIndex( this.pointer, this.index.pointer );
+					return this;
+
+				};
+
 				THREE.WebGLRenderer = function ( params ) {
 
 					params = params || {};
@@ -295,11 +398,8 @@
 					var canvas = params.canvas;
 					var id = canvas.id;
 
-					var idPointer = Module._malloc( id.length + 1 );
-					Module.stringToUTF8( id, idPointer, id.length + 1 );
-
 					this.pointer = Module._malloc( Module.functions.sizeOfWebGLRenderer() );
-					Module.functions.WebGLRenderer_init( this.pointer, idPointer );
+					Module.functions.WebGLRenderer_init( this.pointer, stringsToPointer( id ) );
 
 				}
 
@@ -330,6 +430,14 @@
 
 			}
 
+			function stringsToPointer( str ) {
+
+				var pointer = Module._malloc( str.length + 1 );
+				Module.stringToUTF8( str, pointer, str.length + 1 );
+				return pointer;
+
+			}
+
 			function init() {
 
 				var id = 'wasmCanvas';
@@ -347,19 +455,29 @@
 
 				scene = new THREE.Scene();
 
-				camera = new THREE.PerspectiveCamera( 60, width / height, 0.01, 2000 );
-				camera.position.z = 30.0;
+				camera = new THREE.PerspectiveCamera( 60, width / height, 1.0, 2000 );
+				camera.position.z = 50.0;
+
+				var geometrySize = 2.0;
+
+				var geometries = [
+					new THREE.BoxBufferGeometry( geometrySize, geometrySize, geometrySize ),
+					new THREE.CylinderBufferGeometry( geometrySize, geometrySize, geometrySize ),
+					new THREE.SphereBufferGeometry( geometrySize )
+				];
+
+				var material = new THREE.MeshBasicMaterial();
 
 				for ( var i = 0; i < 300; i ++ ) {
 
-					var object = new THREE.Object3D();
-					object.position.x = Math.random() * 50.0 - 25.0;
-					object.position.y = Math.random() * 50.0 - 25.0;
-					object.position.z = Math.random() * 50.0 - 25.0;
-					object.rotation.y = Math.random() * 2.0 * Math.PI;
-					object.rotation.z = Math.random() * 2.0 * Math.PI;
-					object.scale.x = object.scale.y = object.scale.z = Math.random() * 0.5 + 0.5;
-					scene.add( object );
+					var mesh = new THREE.Mesh( geometries[ i % geometries.length ], material );
+					mesh.position.x = Math.random() * 50.0 - 25.0;
+					mesh.position.y = Math.random() * 50.0 - 25.0;
+					mesh.position.z = Math.random() * 50.0 - 25.0;
+					mesh.rotation.y = Math.random() * 2.0 * Math.PI;
+					mesh.rotation.z = Math.random() * 2.0 * Math.PI;
+					mesh.scale.x = mesh.scale.y = mesh.scale.z = Math.random() * 0.5 + 0.5;
+					scene.add( mesh );
 
 				}
 
@@ -367,8 +485,8 @@
 
 			function onDocumentMouseMove( event ) {
 
-				mouseX = ( event.clientX - windowHalfX ) * 0.05;
-				mouseY = ( event.clientY - windowHalfY ) * 0.05;
+				mouseX = ( event.clientX - windowHalfX ) * 0.01;
+				mouseY = ( event.clientY - windowHalfY ) * 0.01;
 
 			}
 
@@ -380,8 +498,8 @@
 				camera.position.y += ( - mouseY - camera.position.y ) * 0.05;
 				camera.lookAt( scene.position );
 
-				scene.rotation.x += 0.002;
-				scene.rotation.y += 0.004;
+				//scene.rotation.x += 0.002;
+				//scene.rotation.y += 0.004;
 
 				for ( var i = 0, il = scene.children.length; i < il; i ++ ) {
 
