@@ -10477,9 +10477,13 @@
 
 		this.version = 0;
 
+		this.init();
+
 	}
 
 	Object.defineProperty( BufferAttribute.prototype, 'needsUpdate', {
+
+		init: function () {},
 
 		set: function ( value ) {
 
@@ -11184,6 +11188,8 @@
 
 		this.userData = {};
 
+		this.init();
+
 	}
 
 	BufferGeometry.prototype = Object.assign( Object.create( EventDispatcher.prototype ), {
@@ -11191,6 +11197,8 @@
 		constructor: BufferGeometry,
 
 		isBufferGeometry: true,
+
+		init: function () {},
 
 		getIndex: function () {
 
@@ -14155,14 +14163,14 @@
 
 	function Mesh( geometry, material ) {
 
-		Object3D.call( this );
-
-		this.type = 'Mesh';
-
 		this.geometry = geometry !== undefined ? geometry : new BufferGeometry();
 		this.material = material !== undefined ? material : new MeshBasicMaterial( { color: Math.random() * 0xffffff } );
 
 		this.drawMode = TrianglesDrawMode;
+
+		Object3D.call( this );
+
+		this.type = 'Mesh';
 
 		this.updateMorphTargets();
 
