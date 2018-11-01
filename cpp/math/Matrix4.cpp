@@ -249,3 +249,18 @@ Matrix4* Matrix4::makePerspective(
 
 	return this;
 }
+
+double Matrix4::getMaxScaleOnAxis() {
+	double scaleXSq = this->elements[0] * this->elements[0] +
+		this->elements[1] * this->elements[1] +
+		this->elements[2] * this->elements[2];
+	double scaleYSq = this->elements[4] * this->elements[4] +
+		this->elements[5] * this->elements[5] +
+		this->elements[6] * this->elements[6];
+	double scaleZSq = this->elements[8] * this->elements[8] +
+		this->elements[9] * this->elements[9] +
+		this->elements[10] * this->elements[10];
+
+	double max = scaleXSq >= scaleYSq ? scaleXSq : scaleYSq;
+	return sqrt(max >= scaleZSq ? max : scaleZSq);
+}

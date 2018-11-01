@@ -1,6 +1,7 @@
 ﻿#ifndef __THREE_MATRIX4__
 #define __THREE_MATRIX4__
 
+#include <math.h>
 #include "Vector3.h"
 #include "Quaternion.h"
 
@@ -39,6 +40,8 @@ public:
 		double near,
 		double far
 	);
+
+	double getMaxScaleOnAxis();
 };
 
 #endif

@@ -4,11 +4,14 @@
 #include <map>
 #include <string>
 #include "../core/BufferAttribute.h"
+#include "../math/Sphere.h"
+#include "../math/Box3.h"
 
 class BufferGeometry {
 public:
 	BufferAttribute *index;
 	std::map<std::string, BufferAttribute*> attributes;
+	Sphere *boundingSphere;
 
 	BufferGeometry();
 
@@ -26,6 +29,8 @@ public:
 	BufferAttribute* getAttribute(
 		std::string name
 	);
+
+	BufferGeometry* computeBoundingSphere();
 };
 
 #endif
