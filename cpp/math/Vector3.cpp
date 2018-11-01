@@ -59,3 +59,41 @@ Vector3* Vector3::setFromMatrixPosition(
 	this->z = m->elements[14];
 	return this;
 }
+
+Vector3* Vector3::multiplyScalar(
+	double scalar
+) {
+	this->x *= scalar;
+	this->y *= scalar;
+	this->z *= scalar;
+	return this;
+}
+
+double Vector3::dot(
+	Vector3 *v
+) {
+	return this->x * v->x + this->y * v->y + this->z * v->z;
+}
+
+double Vector3::length() {
+	return sqrt(this->x * this->x + this->y * this->y + this->z * this->z);
+}
+
+double Vector3::distanceToSquared(
+	Vector3* v
+) {
+	double dx = this->x - v->x;
+	double dy = this->y - v->y;
+	double dz = this->z - v->z;
+	return dx * dx + dy * dy + dz * dz;
+}
+
+Vector3* Vector3::addVectors(
+	Vector3 *a,
+	Vector3 *b
+) {
+	this->x = a->x + b->x;
+	this->y = a->y + b->y;
+	this->z = a->z + b->z;
+	return this;
+}
