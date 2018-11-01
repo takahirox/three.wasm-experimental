@@ -16,3 +16,21 @@ BufferAttribute::BufferAttribute(
 	}
 	this->count = _dataLength / this->itemSize / this->bytePerElement;
 }
+
+float BufferAttribute::getXAsFloat(
+	int index
+) {
+	return ((float*)(this->array))[index * this->itemSize];
+}
+
+float BufferAttribute::getYAsFloat(
+	int index
+) {
+	return ((float*)(this->array))[index * this->itemSize + 1];
+}
+
+float BufferAttribute::getZAsFloat(
+	int index
+) {
+	return ((float*)(this->array))[index * this->itemSize + 2];
+}

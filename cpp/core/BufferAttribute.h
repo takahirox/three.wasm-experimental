@@ -1,6 +1,8 @@
 ﻿#ifndef __THREE_BUFFER_ATTRIBUTE__
 #define __THREE_BUFFER_ATTRIBUTE__
 
+// @TODO: Use template
+
 class BufferAttribute {
 public:
 	void* array;
@@ -17,6 +19,18 @@ public:
 		type _dataType,
 		int _dataLength,
 		int _itemSize
+	);
+
+	float getXAsFloat(
+		int index
+	);
+
+	float getYAsFloat(
+		int index
+	);
+
+	float getZAsFloat(
+		int index
 	);
 };
 
