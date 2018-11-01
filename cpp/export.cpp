@@ -109,6 +109,14 @@ extern "C" {
 		return &object->position;
 	}
 
+	Object3D* Object3D_updateMatrixWorld(
+		Object3D *object,
+		bool force
+	) {
+		object->updateMatrixWorld(force);
+		return object;
+	}
+
 	Mesh* Mesh_init(
 		Mesh* mesh,
 		BufferGeometry *geometry,
