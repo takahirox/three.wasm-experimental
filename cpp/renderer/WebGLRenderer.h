@@ -8,6 +8,7 @@
 #include <map>
 #include "../include/html5.h"
 #include "../math/Matrix4.h"
+#include "../math/Frustum.h"
 #include "../core/Object3D.h"
 #include "../materials/Materials.h"
 #include "../objects/Mesh.h"
@@ -30,6 +31,10 @@ private:
 	WebGLGeometries *geometries;
 	WebGLIndexedBufferRenderer renderer;
 	BufferGeometry *currentGeometry;
+	GLuint program;
+	GLuint currentProgram;
+	Camera *currentCamera;
+	Frustum frustum;
 	Vector3 tmpVector3;
 
 	bool activateContext();
@@ -56,7 +61,6 @@ public:
 	int height;
 	bool initialized;
 	EMSCRIPTEN_WEBGL_CONTEXT_HANDLE context;
-	GLuint program;
 
 	WebGLRenderer(char *_id);
 

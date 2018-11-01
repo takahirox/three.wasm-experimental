@@ -130,7 +130,8 @@ GLuint compileShader() {
 
 WebGLRenderer::WebGLRenderer(
 	char *_id
-): id(_id), currentGeometry(NULL), initialized(false) {
+): id(_id), currentGeometry(NULL), initialized(false),
+	program(0), currentProgram(0), currentCamera(NULL) {
 	printf( "Context creation for %s\n", id );
 
 	EmscriptenWebGLContextAttributes attrs;
@@ -197,7 +198,7 @@ void WebGLRenderer::projectObject(
 	Object3D *object,
 	Camera *camera
 ) {
-	if(object->type() == MeshType) {
+	if(object->type() == MeshType && this->frustum.intersectsObject(object)) {
 		this->tmpVector3.setFromMatrixPosition(&object->matrixWorld)
 			->applyMatrix4(&this->projScreenMatrix);
 		struct RenderItem entry;
@@ -234,17 +235,30 @@ void WebGLRenderer::renderObject(
 	BufferGeometry *geometry = mesh->geometry;
 	Material *material = mesh->material;
 
-	if(this->currentGeometry != geometry) {
-		glUseProgram(this->program);
+	bool refreshProgram = false;
 
+	if(this->program != this->currentProgram) {
+		glUseProgram(this->program);
+		this->currentProgram = this->program;
+		refreshProgram = true;
+	}
+
+	if(refreshProgram || camera != this->currentCamera) {
+		GLfloat projectionMatrixElements[16];
+		for(int i = 0; i < 16; ++i) {
+			projectionMatrixElements[i] = camera->projectionMatrix.elements[i];
+		}
+		glUniformMatrix4fv(6, 1, GL_FALSE, projectionMatrixElements);
+		this->currentCamera = camera;
+	}
+
+	if(this->currentGeometry != geometry) {
 		for(std::map<std::string, BufferAttribute*>::iterator it =
 			mesh->geometry->attributes.begin();
 			it != mesh->geometry->attributes.end(); ++it) {
-			if(it->first.compare("position") == 0){
-				glBindBuffer(GL_ARRAY_BUFFER, this->attributes->get(it->second).buffer);
-				glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-				glEnableVertexAttribArray(0);
-			}
+			glBindBuffer(GL_ARRAY_BUFFER, this->attributes->get(it->second).buffer);
+			glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+			glEnableVertexAttribArray(0);
 		}
 		this->currentGeometry = geometry;
 	}
@@ -264,17 +278,15 @@ void WebGLRenderer::renderObject(
 	}
 
 	GLfloat modelViewMatrixElements[16];
-	GLfloat projectionMatrixElements[16];
-	GLfloat colorElements[3];
 	for(int i = 0; i < 16; ++i) {
-		modelViewMatrixElements[i] = object->modelViewMatrix.elements[i];
-		projectionMatrixElements[i] = camera->projectionMatrix.elements[i];
+		modelViewMatrixElements[i] = (GLfloat)object->modelViewMatrix.elements[i];
 	}
+	glUniformMatrix4fv(5, 1, GL_FALSE, modelViewMatrixElements);
+
+	GLfloat colorElements[3];
 	colorElements[0] = color->x;
 	colorElements[1] = color->y;
 	colorElements[2] = color->z;
-	glUniformMatrix4fv(5, 1, GL_FALSE, modelViewMatrixElements);
-	glUniformMatrix4fv(6, 1, GL_FALSE, projectionMatrixElements);
 	glUniform3fv(7, 1, colorElements);
 
 	this->renderer.render(drawStart, drawCount);
@@ -304,6 +316,7 @@ WebGLRenderer* WebGLRenderer::render(
 
 	this->projScreenMatrix.multiplyMatrices(
 		&camera->projectionMatrix, &camera->matrixWorldInverse);
+	this->frustum.setFromMatrix(&this->projScreenMatrix);
 
 	this->projectObject(scene, camera);
 	std::sort(this->currentRenderList.begin(), this->currentRenderList.end(),
@@ -313,6 +326,7 @@ WebGLRenderer* WebGLRenderer::render(
 	this->renderObjects(&this->currentRenderList, scene, camera);
 
 	this->currentRenderList.clear();
+	this->currentCamera = NULL;
 
 	return this;
 }
