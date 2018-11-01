@@ -10483,8 +10483,6 @@
 
 	Object.defineProperty( BufferAttribute.prototype, 'needsUpdate', {
 
-		init: function () {},
-
 		set: function ( value ) {
 
 			if ( value === true ) this.version ++;
@@ -10496,6 +10494,8 @@
 	Object.assign( BufferAttribute.prototype, {
 
 		isBufferAttribute: true,
+
+		init: function () {},
 
 		onUploadCallback: function () {},
 
