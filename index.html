@@ -412,6 +412,9 @@
 				THREE.BufferGeometry.prototype.addAttribute = function ( name, attribute ) {
 
 					this._addAttribute( name, attribute );
+
+					if ( name !== 'position' ) return; // Currently support only position.
+
 					Module.functions.BufferGeometry_addAttribute( this.pointer, stringsToPointer( name ), attribute.pointer );
 					return this;
 
@@ -440,9 +443,9 @@
 
 				Object.assign( THREE.WebGLRenderer.prototype, {
 
-					clearColor( r, g, b, a ) {
+					setClearColor( color, alpha ) {
 
-						Module.functions.WebGLRenderer_clearColor( this.pointer, r, g, b, a );
+						Module.functions.WebGLRenderer_clearColor( this.pointer, color.r, color.g, color.b, alpha );
 						return this;
 
 					},
@@ -486,7 +489,9 @@
 
 				renderer = new THREE.WebGLRenderer( {
 					canvas: canvas
-				} ).setSize( width, height ).clearColor( 1.0, 1.0, 1.0, 1.0 );
+				} );
+				renderer.setSize( width, height );
+				renderer.setClearColor( new THREE.Color( 0xffffff ), 1.0 );
 
 				scene = new THREE.Scene();
 
@@ -500,8 +505,6 @@
 					new THREE.CylinderBufferGeometry( geometrySize, geometrySize, geometrySize ),
 					new THREE.SphereBufferGeometry( geometrySize )
 				];
-
-				var material = new THREE.MeshBasicMaterial();
 
 				for ( var i = 0; i < 300; i ++ ) {
 
