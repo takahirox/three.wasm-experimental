@@ -2,6 +2,7 @@
 
 emcc \
 	-O2\
+	-g\
 	-o ./three-wasm.js\
 	./cpp/*.cpp ./cpp/*/*.cpp ./cpp/*/*/*.cpp \
 	--memory-init-file 0\
@@ -25,6 +26,7 @@ emcc \
 	'_Object3D_init',\
 	'_Object3D_add',\
 	'_Object3D_getPositionPointer',\
+	'_Object3D_updateMatrixWorld',\
 	'_Mesh_init',\
 	'_MeshBasicMaterial_init',\
 	'_Scene_init',\
