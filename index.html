@@ -15,13 +15,53 @@
 		<script src="three/three.js"></script>
 		<script src="three-wasm.js"></script>
 		<script src="libs/stats.min.js"></script>
+		<script src="libs/dat.gui.min.js"></script>
 
 		<script>
 
+			var useWasm = true;
+			var objectNum = 1000;
+			var animationEnabled = true;
+			var query = location.href.split( '?' )[ 1 ];
+
+			if ( query ) {
+
+				var queryArray = query.split( '&' );
+
+				for ( var i = 0, il = queryArray.length; i < il; i ++ ) {
+
+					var params = queryArray[ i ].split( '=' );
+					var name = params[ 0 ].toLowerCase();
+					var value = params[ 1 ];
+
+					switch( name ) {
+
+						case 'num':
+							objectNum = parseInt( value );
+							break;
+
+						case 'javascript':
+							useWasm = ! ( value === 'true' || value === '1' );
+							break;
+
+						case 'animation':
+							animationEnabled = value === 'true' || value === '1';
+							break;
+
+						default:
+							console.error( 'Unknown option: ' + name );
+
+					}
+
+				}
+
+			}
+
 			setTimeout( function () {
 
+				initGui();
 				initModule();
-				initThree();
+				if ( useWasm ) initThree();
 				init();
 				animate();
 
@@ -37,6 +77,26 @@
 			var windowHalfY = window.innerHeight / 2.0;
 
 			document.addEventListener( 'mousemove', onDocumentMouseMove, false );
+
+			function initGui() {
+
+				var gui = new dat.GUI();
+
+				var api = {
+					'platform': useWasm ? 'wasm' : 'JavaScript',
+					'num': objectNum,
+					'animation': animationEnabled,
+					'update': function () {
+						location.href = '?num=' + api.num + '&javascript=' + ( api.platform === 'JavaScript' ) + '&animation=' + api.animation;
+					}
+				};
+
+				gui.add( api, 'platform', [ 'wasm', 'JavaScript' ] );
+				gui.add( api, 'num', 1, 10000, 1 );
+				gui.add( api, 'animation' );
+				gui.add( api, 'update' );
+
+			}
 
 			function initModule() {
 
@@ -561,7 +621,7 @@
 					new THREE.SphereBufferGeometry( geometrySize )
 				];
 
-				for ( var i = 0; i < 300; i ++ ) {
+				for ( var i = 0; i < objectNum; i ++ ) {
 
 					var color = new THREE.Color();
 					color.r = Math.random();
@@ -602,11 +662,15 @@
 				//scene.rotation.x += 0.002;
 				//scene.rotation.y += 0.004;
 
-				for ( var i = 0, il = scene.children.length; i < il; i ++ ) {
+				if ( animationEnabled ) {
 
-					var child = scene.children[ i ];
-					child.rotation.x += 0.02;
-					child.rotation.y += 0.04;
+					for ( var i = 0, il = scene.children.length; i < il; i ++ ) {
+
+						var child = scene.children[ i ];
+						child.rotation.x += 0.02;
+						child.rotation.y += 0.04;
+
+					}
 
 				}
 
