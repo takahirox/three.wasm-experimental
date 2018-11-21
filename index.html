@@ -621,6 +621,13 @@
 					new THREE.SphereBufferGeometry( geometrySize )
 				];
 
+				for ( var i = 0, il = geometries.length; i < il; i ++ ) {
+
+					geometries[ i ].removeAttribute( 'normal' );
+					geometries[ i ].removeAttribute( 'uv' );
+
+				}
+
 				for ( var i = 0; i < objectNum; i ++ ) {
 
 					var color = new THREE.Color();
