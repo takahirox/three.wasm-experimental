@@ -217,7 +217,10 @@
 					offset += 3 * 8;
 
 					var quaternion = new Float64Array( buffer, offset, 4 );
-					offset += 4 * 6;
+					offset += 4 * 8;
+
+					var scale = new Float64Array( buffer, offset, 4 );
+					offset += 3 * 6;
 
 					Object.defineProperties( this.position, {
 
@@ -332,6 +335,58 @@
 							set: function ( value ) {
 
 								quaternion[ 3 ] = value;
+
+							}
+
+						}
+
+					} );
+
+					Object.defineProperties( this.scale, {
+
+						x: {
+
+							get: function () {
+
+								return scale[ 0 ];
+
+							},
+
+							set: function ( value ) {
+
+								scale[ 0 ] = value;
+
+							}
+
+						},
+
+						y: {
+
+							get: function () {
+
+								return scale[ 1 ];
+
+							},
+
+							set: function ( value ) {
+
+								scale[ 1 ] = value;
+
+							}
+
+						},
+
+						z: {
+
+							get: function () {
+
+								return scale[ 2 ];
+
+							},
+
+							set: function ( value ) {
+
+								scale[ 2 ] = value;
 
 							}
 
