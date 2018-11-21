@@ -1,0 +1,177 @@
+﻿<html>
+	<head>
+	</head>
+	<body>
+		<script src="three/three.js"></script>
+		<script src="three-wasm.js"></script>
+
+		<script>
+
+			setTimeout( function () {
+
+				initModule();
+				init();
+
+			}, 1000 );
+
+			var graphWidth = 4;
+			var graphDepth = 7;
+			var loop = 0x10;
+			var nodeNum;
+
+			var regularRoot;
+			var definePropertiesRoot;
+
+			function initModule() {
+
+				console.log( Module );
+
+				Module.functions = {};
+
+				Module.functions.sizeOfVector3 = Module.cwrap(
+					'sizeOfVector3',
+					'number',
+					[]
+				);
+
+			}
+
+			function init() {
+
+				regularRoot = createGraph( false );
+				definePropertiesRoot = createGraph( true );
+
+				document.getElementById( 'runButton' ).disabled = false;
+
+			}
+
+			function createObject3DWithDefineProperties() {
+
+				var object = new THREE.Object3D();
+				var pointer = Module._malloc( Module.functions.sizeOfVector3() );
+				var offset = pointer / 8;
+				var heap = Module.HEAPF64;
+
+				Object.defineProperties( object.position, {
+
+					x: {
+
+						get: function () {
+
+							return heap[ offset ];
+
+						},
+
+						set: function ( value ) {
+
+							heap[ offset ] = value;
+
+						}
+
+					},
+
+					y: {
+
+						get: function () {
+
+							return heap[ offset + 1 ];
+
+						},
+
+						set: function ( value ) {
+
+							heap[ offset + 1 ] = value;
+
+						}
+
+					},
+
+					z: {
+
+						get: function () {
+
+							return heap[ offset + 2 ];
+
+						},
+
+						set: function ( value ) {
+
+							heap[ offset + 2 ] = value;
+
+						}
+
+					}
+
+				} );
+
+				return object;
+
+			}
+
+			function createGraph( defineProperties ) {
+
+				function addChildren( parent, depth ) {
+
+					if ( depth > graphDepth ) return;
+
+					for ( var i = 0; i < graphWidth; i ++ ) {
+
+						nodeNum ++;
+						var child = defineProperties ? createObject3DWithDefineProperties() : new THREE.Object3D();
+						parent.add( child );
+						addChildren( child, depth + 1 );
+
+					}
+
+				}
+
+				var root = new THREE.Object3D();
+				nodeNum = 1;
+				addChildren( root, 0 );
+				return root;
+
+			}
+
+			function runTest( root ) {
+
+				var startTime = performance.now();
+
+				for ( var i = 0; i < loop; i ++ ) {
+
+					root.traverse( function ( object ) {
+
+						object.position.x += 1.0;
+						object.position.y += 1.0;
+						object.position.z += 1.0;
+
+					} );
+
+				}
+
+				var endTime = performance.now();
+
+				return endTime - startTime;
+
+			}
+
+			function runTests() {
+
+				document.getElementById( 'runButton' ).disabled = true;
+
+				document.getElementById( 'loopNum' ).innerText = loop;
+				document.getElementById( 'nodeNum' ).innerText = nodeNum;
+				document.getElementById( 'regularPerformance' ).innerText = runTest( regularRoot ).toFixed( 2 );
+				document.getElementById( 'definePropertiesPerformance' ).innerText = runTest( definePropertiesRoot ).toFixed( 2 );
+
+				document.getElementById( 'runButton' ).disabled = false;
+
+			}
+
+		</script>
+
+		<button id="runButton" onclick="runTests()" disabled="true">run</button>
+		<div><span id="nodeNum"></span> nodes, <span id="loopNum"></span> loops</div>
+		<div>Regular: <span id="regularPerformance"></span> ms</div>
+		<div>With defineProperties: <span id="definePropertiesPerformance"></span> ms</div>
+	</body>
+</html>

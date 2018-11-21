@@ -1,0 +1,118 @@
+﻿<html>
+	<head>
+	</head>
+	<body>
+		<script src="three/three.js"></script>
+		<script src="three-wasm.js"></script>
+
+		<script>
+
+			setTimeout( function () {
+
+				initModule();
+				init();
+
+			}, 1000 );
+
+			var loop = 0x100000;
+			var gl;
+
+			function initModule() {
+
+				console.log( Module );
+
+				Module.functions = {};
+
+				Module.functions.initGl = Module.cwrap(
+					'initGl',
+					'void',
+					['number']
+				);
+
+				Module.functions.runTest = Module.cwrap(
+					'runTest',
+					'void',
+					['number']
+				);
+
+			}
+
+			function init() {
+
+				var canvas = document.createElement( 'canvas' );
+				canvas.width = 1;
+				canvas.height = 1;
+				canvas.id = 'js';
+				document.body.appendChild( canvas );
+				gl = canvas.getContext( 'webgl' );
+
+
+				var canvas2 = document.createElement( 'canvas' );
+				canvas.width = 1;
+				canvas.height = 1;
+				canvas.id = 'wasm';
+				document.body.appendChild( canvas2 );
+				Module.functions.initGl( stringsToPointer( canvas.id ) );
+
+				document.getElementById( 'runButton' ).disabled = false;
+
+			}
+
+			function stringsToPointer( str ) {
+
+				var pointer = Module._malloc( str.length + 1 );
+				Module.stringToUTF8( str, pointer, str.length + 1 );
+				return pointer;
+
+			}
+
+			function runJS() {
+
+				var startTime = performance.now();
+
+				for ( var i = 0; i < loop; i ++ ) {
+
+					gl.clearColor( 0.0, 0.0, 0.0, 0.0 );
+
+				}
+
+				var endTime = performance.now();
+
+				return endTime - startTime;
+
+			}
+
+			function runWASM() {
+
+				var startTime = performance.now();
+
+				Module.functions.runTest( loop );
+
+				var endTime = performance.now();
+
+				return endTime - startTime;
+
+			}
+
+			function runTests() {
+
+				document.getElementById( 'runButton' ).disabled = true;
+
+				document.getElementById( 'loopNum' ).innerText = loop;
+				document.getElementById( 'jsPerformance' ).innerText = runJS().toFixed( 2 );
+				document.getElementById( 'wasmPerformance' ).innerText = runWASM().toFixed( 2 );
+
+				document.getElementById( 'runButton' ).disabled = false;
+
+			}
+
+		</script>
+
+		<button id="runButton" onclick="runTests()" disabled="true">run</button>
+		<div><span id="loopNum"></span> loops</div>
+		<div>JS: <span id="jsPerformance"></span> ms</div>
+		<div>WASM: <span id="wasmPerformance"></span> ms</div>
+
+		</script>
+	</body>
+</html>

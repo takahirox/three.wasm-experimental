@@ -1,0 +1,207 @@
+﻿<html>
+	<head>
+	</head>
+	<body>
+		<script src="three/three.js"></script>
+		<script src="three-wasm.js"></script>
+
+		<script>
+
+			setTimeout( function () {
+
+				initModule();
+
+			}, 1000 );
+
+			var num = 0x10000;
+
+			function initModule() {
+
+				console.log( Module );
+
+				Module.functions = {};
+
+				Module.functions.sizeOfMatrix4 = Module.cwrap(
+					'sizeOfMatrix4',
+					'number',
+					[]
+				);
+
+				Module.functions.Matrix4_multiplyMatrices = Module.cwrap(
+					'Matrix4_multiplyMatrices',
+					'number',
+					['number', 'number', 'number']
+				);
+
+				document.getElementById( 'runButton' ).disabled = false;
+
+			}
+
+			function runJS() {
+
+				var m1 = new THREE.Matrix4();
+				var m2 = new THREE.Matrix4();
+				var m3 = new THREE.Matrix4();
+
+				var startTime = performance.now();
+
+				for ( var i = 0; i < num; i ++ ) {
+
+					m1.multiplyMatrices( m2, m3 );
+
+				}
+
+				var endTime = performance.now();
+
+				return endTime - startTime;
+
+			}
+
+			function runWASMWithMallocAndCopy() {
+
+				var m1 = new THREE.Matrix4();
+				var m2 = new THREE.Matrix4();
+				var m3 = new THREE.Matrix4();
+
+				var startTime = performance.now();
+
+				for ( var i = 0; i < num; i ++ ) {
+
+					var pointer1 = Module._malloc( Module.functions.sizeOfMatrix4() );
+					var pointer2 = Module._malloc( Module.functions.sizeOfMatrix4() );
+					var pointer3 = Module._malloc( Module.functions.sizeOfMatrix4() );
+
+					var offset1 = pointer1 / 8;
+					var offset2 = pointer2 / 8;
+					var offset3 = pointer3 / 8;
+
+					m2.toArray( Module.HEAPF64, pointer2 );
+					m3.toArray( Module.HEAPF64, pointer3 );
+
+					Module.functions.Matrix4_multiplyMatrices(
+						pointer1,
+						pointer2,
+						pointer3
+					);
+
+					m1.fromArray( Module.HEAPF64, pointer1 );
+
+					Module._free( pointer1 );
+					Module._free( pointer2 );
+					Module._free( pointer3 );
+
+				}
+
+				var endTime = performance.now();
+
+				return endTime - startTime;
+
+			}
+
+			function runWASMWithCopy() {
+
+				var m1 = new THREE.Matrix4();
+				var m2 = new THREE.Matrix4();
+				var m3 = new THREE.Matrix4();
+
+				var pointer1 = Module._malloc( Module.functions.sizeOfMatrix4() );
+				var pointer2 = Module._malloc( Module.functions.sizeOfMatrix4() );
+				var pointer3 = Module._malloc( Module.functions.sizeOfMatrix4() );
+
+				var offset1 = pointer1 / 8;
+				var offset2 = pointer2 / 8;
+
+				var offset3 = pointer3 / 8;
+
+				var startTime = performance.now();
+
+				for ( var i = 0; i < num; i ++ ) {
+
+					m2.toArray( Module.HEAPF64, pointer2 );
+					m3.toArray( Module.HEAPF64, pointer3 );
+
+					Module.functions.Matrix4_multiplyMatrices(
+						pointer1,
+						pointer2,
+						pointer3
+					);
+
+					m1.fromArray( Module.HEAPF64, pointer1 );
+
+				}
+
+				var endTime = performance.now();
+
+				Module._free( pointer1 );
+				Module._free( pointer2 );
+				Module._free( pointer3 );
+
+				return endTime - startTime;
+
+			}
+
+			function runWASMWithoutMallocNorCopy() {
+
+				var m1 = new THREE.Matrix4();
+				var m2 = new THREE.Matrix4();
+				var m3 = new THREE.Matrix4();
+
+				var pointer1 = Module._malloc( Module.functions.sizeOfMatrix4() );
+				var pointer2 = Module._malloc( Module.functions.sizeOfMatrix4() );
+				var pointer3 = Module._malloc( Module.functions.sizeOfMatrix4() );
+
+				var offset1 = pointer1 / 8;
+				var offset2 = pointer2 / 8;
+				var offset3 = pointer3 / 8;
+
+				m2.toArray( Module.HEAPF64, pointer2 );
+				m3.toArray( Module.HEAPF64, pointer3 );
+
+				var startTime = performance.now();
+
+				for ( var i = 0; i < num; i ++ ) {
+
+					Module.functions.Matrix4_multiplyMatrices(
+						pointer1,
+						pointer2,
+						pointer3
+					);
+
+				}
+
+				var endTime = performance.now();
+
+				m1.fromArray( Module.HEAPF64, pointer1 );
+
+				Module._free( pointer1 );
+				Module._free( pointer2 );
+				Module._free( pointer3 );
+
+				return endTime - startTime;
+
+			}
+
+			function runTests() {
+
+				document.getElementById( 'runButton' ).disabled = true;
+
+				document.getElementById( 'operationNum' ).innerText = num;
+				document.getElementById( 'jsPerformance' ).innerText = runJS().toFixed( 2 );
+				document.getElementById( 'wasmPerformance1' ).innerText = runWASMWithMallocAndCopy().toFixed( 2 );
+				document.getElementById( 'wasmPerformance2' ).innerText = runWASMWithCopy().toFixed( 2 );
+				document.getElementById( 'wasmPerformance3' ).innerText = runWASMWithoutMallocNorCopy().toFixed( 2 );
+
+				document.getElementById( 'runButton' ).disabled = false;
+
+			}
+
+		</script>
+
+		<button id="runButton" onclick="runTests()" disabled="true">run</button>
+		<div><span id="operationNum"></span> operations</div>
+		<div>JS: <span id="jsPerformance"></span> ms</div>
+		<div>WASM with malloc and copy: <span id="wasmPerformance1"></span> ms</div>
+		<div>WASM with copy: <span id="wasmPerformance2"></span> ms</div>
+		<div>WASM without malloc nor copy: <span id="wasmPerformance3"></span> ms</div>
+	</body>
+</html>
