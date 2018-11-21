@@ -17159,8 +17159,31 @@
 		var vertexGlsl = prefixVertex + vertexShader;
 		var fragmentGlsl = prefixFragment + fragmentShader;
 
-		// console.log( '*VERTEX*', vertexGlsl );
-		// console.log( '*FRAGMENT*', fragmentGlsl );
+		// Override GLSL to fairly compare with WASM performance
+		vertexGlsl = [
+			'attribute vec3 position;',
+			'uniform mat4 modelMatrix;',
+			'uniform mat4 modelViewMatrix;',
+			'uniform mat4 projectionMatrix;',
+			'uniform mat4 viewMatrix;',
+			'uniform mat3 normalMatrix;',
+			'uniform vec3 cameraPosition;',
+			'void main() {',
+			'	vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);',
+			'	gl_Position = projectionMatrix * mvPosition;',
+			'}'
+		].join( '\n' );
+
+		fragmentGlsl = [
+			'precision mediump float;',
+			'uniform vec3 color;',
+			'void main() {',
+			'	gl_FragColor = vec4(color, 1.0);',
+			'}'
+		].join( '\n' );
+
+		//console.log( '*VERTEX*', vertexGlsl );
+		//console.log( '*FRAGMENT*', fragmentGlsl );
 
 		var glVertexShader = WebGLShader( gl, 35633, vertexGlsl );
 		var glFragmentShader = WebGLShader( gl, 35632, fragmentGlsl );
@@ -23723,6 +23746,9 @@
 
 			if ( refreshMaterial ) {
 
+				// update only color uniform to fairly compare with WASM performance
+				p_uniforms.setValue( _gl, 'color', material.color );
+/*
 				p_uniforms.setValue( _gl, 'toneMappingExposure', _this.toneMappingExposure );
 				p_uniforms.setValue( _gl, 'toneMappingWhitePoint', _this.toneMappingWhitePoint );
 
@@ -23839,7 +23865,7 @@
 				if ( m_uniforms.ltc_2 !== undefined ) m_uniforms.ltc_2.value = UniformsLib.LTC_2;
 
 				WebGLUniforms.upload( _gl, materialProperties.uniformsList, m_uniforms, _this );
-
+*/
 			}
 
 			if ( material.isShaderMaterial && material.uniformsNeedUpdate === true ) {
