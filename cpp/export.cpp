@@ -1,4 +1,5 @@
 ﻿#include "./math/Vector3.h"
+#include "./math/Matrix4.h"
 #include "./core/BufferAttribute.h"
 #include "./core/Object3D.h"
 #include "./geometries/BufferGeometry.h"
@@ -13,6 +14,10 @@
 extern "C" {
 	int sizeOfVector3() {
 		return sizeof(Vector3);
+	}
+
+	int sizeOfMatrix4() {
+		return sizeof(Matrix4);
 	}
 
 	int sizeOfBufferAttribute() {
@@ -54,6 +59,14 @@ extern "C" {
 		double z
 	) {
 		return new(v) Vector3(x, y, z);
+	}
+
+	Matrix4* Matrix4_multiplyMatrices(
+		Matrix4* self,
+		Matrix4* a,
+		Matrix4* b
+	) {
+		return self->multiplyMatrices(a, b);
 	}
 
 	BufferAttribute* BufferAttribute_init(
@@ -179,5 +192,36 @@ extern "C" {
 		Camera *camera
 	) {
 		return renderer->render(scene, camera);
+	}
+
+	void initGl(
+		char *id
+	) {
+		printf( "Context creation for %s\n", id );
+
+		EmscriptenWebGLContextAttributes attrs;
+		attrs.explicitSwapControl = 0;
+		attrs.depth = 1;
+		attrs.stencil = 1;
+		attrs.antialias = 1;
+		attrs.majorVersion = 1;
+		attrs.minorVersion = 0;
+
+		EMSCRIPTEN_WEBGL_CONTEXT_HANDLE context = emscripten_webgl_create_context(id, &attrs);
+
+		if(context <= 0) {
+			printf("Context creation Error\n");
+			return;
+		}
+
+		emscripten_webgl_make_context_current(context);
+	}
+
+	void runTest(
+		int loop
+	) {
+		for(int i = 0; i < loop; i++) {
+			glClearColor(0.0, 0.0, 0.0, 0.0);
+		}
 	}
 }
