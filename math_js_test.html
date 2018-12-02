@@ -1,0 +1,649 @@
+﻿<html>
+	<head>
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<style>
+			body {
+				background:#fff;
+				padding:0;
+				margin:0;
+				font-weight: bold;
+				overflow:hidden;
+			}
+		</style>
+	</head>
+	<body>
+		<script src="three/three.r98.js"></script>
+		<script src="three-wasm.js"></script>
+		<script src="libs/stats.min.js"></script>
+		<script src="libs/dat.gui.min.js"></script>
+
+		<script>
+
+			var useWasm = true;
+			var animationEnabled = true;
+			var query = location.href.split( '?' )[ 1 ];
+
+			if ( query ) {
+
+				var queryArray = query.split( '&' );
+
+				for ( var i = 0, il = queryArray.length; i < il; i ++ ) {
+
+					var params = queryArray[ i ].split( '=' );
+					var name = params[ 0 ].toLowerCase();
+					var value = params[ 1 ];
+
+					switch( name ) {
+
+						case 'num':
+							objectNum = parseInt( value );
+							break;
+
+						case 'javascript':
+							useWasm = ! ( value === 'true' || value === '1' );
+							break;
+
+						case 'animation':
+							animationEnabled = value === 'true' || value === '1';
+							break;
+
+						default:
+							console.error( 'Unknown option: ' + name );
+
+					}
+
+				}
+
+			}
+
+			setTimeout( function () {
+
+				initGui();
+				initModule();
+				init();
+				animate();
+
+			}, 1000 );
+
+			var renderer, scene, camera;
+			var stats = new Stats();
+
+			document.body.appendChild( stats.dom );
+
+			var mouseX = 0, mouseY = 0;
+			var windowHalfX = window.innerWidth / 2.0;
+			var windowHalfY = window.innerHeight / 2.0;
+
+			document.addEventListener( 'mousemove', onDocumentMouseMove, false );
+
+			function initGui() {
+
+				var gui = new dat.GUI();
+
+				var api = {
+					'platform': useWasm ? 'wasm' : 'JavaScript',
+					'num': objectNum,
+					'animation': animationEnabled,
+					'update': function () {
+						location.href = '?num=' + api.num + '&javascript=' + ( api.platform === 'JavaScript' ) + '&animation=' + api.animation;
+					}
+				};
+
+				gui.add( api, 'platform', [ 'wasm', 'JavaScript' ] );
+				gui.add( api, 'num', 1, 15000, 1 );
+				gui.add( api, 'animation' );
+				gui.add( api, 'update' );
+
+			}
+
+			function initModule() {
+
+				console.log( Module );
+
+				Module.functions = {};
+
+				Module.functions.sizeOfVector3 = Module.cwrap(
+					'sizeOfVector3',
+					'number',
+					[]
+				);
+
+				Module.functions.sizeOfMatrix4 = Module.cwrap(
+					'sizeOfMatrix4',
+					'number',
+					[]
+				);
+
+				Module.functions.sizeOfObject3D = Module.cwrap(
+					'sizeOfObject3D',
+					'number',
+					[]
+				);
+
+				Module.functions.sizeOfMesh = Module.cwrap(
+					'sizeOfMesh',
+					'number',
+					[]
+				);
+
+				Module.functions.sizeOfScene = Module.cwrap(
+					'sizeOfScene',
+					'number',
+					[]
+				);
+
+				Module.functions.Vector3_init = Module.cwrap(
+					'Vector3_init',
+					'number',
+					['number', 'number', 'number', 'number']
+				);
+
+				Module.functions.Object3D_init = Module.cwrap(
+					'Object3D_init',
+					'number',
+					['number']
+				);
+
+				Module.functions.Mesh_init = Module.cwrap(
+					'Mesh_init',
+					'number',
+					['number', 'number', 'number']
+				);
+
+				Module.functions.Object3D_add = Module.cwrap(
+					'Object3D_add',
+					'number',
+					['number', 'number']
+				);
+
+				Module.functions.Object3D_updateMatrixWorld = Module.cwrap(
+					'Object3D_updateMatrixWorld',
+					'number',
+					['number', 'number']
+				);
+
+				Module.functions.Object3D_getPositionPointer = Module.cwrap(
+					'Object3D_getPositionPointer',
+					'number',
+					['number']
+				);
+
+				Module.functions.Scene_init = Module.cwrap(
+					'Scene_init',
+					'number',
+					['number']
+				);
+
+			}
+
+			THREE.Object3DEx = ( function () {
+
+				function Object3DEx() {
+
+					THREE.Object3D.call( this );
+
+					this.pointer = Module._malloc( Module.functions.sizeOfObject3D() );
+					Module.functions.Object3D_init( this.pointer );
+
+					var offset = Module.functions.Object3D_getPositionPointer( this.pointer );
+
+					var position = new THREE.Vector3Ex( offset );
+					offset += 3 * 8;
+
+					var rotation = new THREE.Euler();
+					var quaternion = new THREE.QuaternionEx( offset );
+					offset += 4 * 8;
+
+					var scale = new THREE.Vector3Ex( offset, 1, 1, 1 );
+					offset += 3 * 8;
+
+					var matrix = new THREE.Matrix4Ex( offset );
+					offset += 16 * 8;
+
+					var matrixWorld = new THREE.Matrix4Ex( offset );
+					offset += 16 * 8;
+
+					function onRotationChange() {
+
+						quaternion.setFromEuler( rotation, false );
+
+					}
+
+					function onQuaternionChange() {
+
+						rotation.setFromQuaternion( quaternion, undefined, false );
+
+					}
+
+					rotation.onChange( onRotationChange );
+					quaternion.onChange( onQuaternionChange );
+
+					Object.defineProperties( this, {
+						position: {
+							configurable: true,
+							enumerable: true,
+							value: position
+						},
+						rotation: {
+							configurable: true,
+							enumerable: true,
+							value: rotation
+						},
+						quaternion: {
+							configurable: true,
+							enumerable: true,
+							value: quaternion
+						},
+						scale: {
+							configurable: true,
+							enumerable: true,
+							value: scale
+						}
+					} );
+
+					this.matrix = matrix;
+					this.matrixWorld = matrixWorld;
+
+				}
+
+				Object3DEx.prototype = Object.assign( Object.create( THREE.Object3D.prototype ), {
+
+					constructor: Object3DEx,
+
+					add: function ( child ) {
+
+						THREE.Object3D.prototype.add.call( this, child );
+
+						Module.functions.Object3D_add( this.pointer, child.pointer );
+						return this;
+
+					}
+
+				} );
+
+				return Object3DEx;
+
+			}() );
+
+			THREE.Vector3Ex = ( function () {
+
+				function Vector3Ex( pointer, x, y, z ) {
+
+					THREE.Vector3.call( this, x, y, z );
+
+					this.pointer = pointer;
+
+					var elements = new Float64Array( Module.HEAPF64.buffer, this.pointer, 3 );
+
+					elements[ 0 ] = this.x;
+					elements[ 1 ] = this.y;
+					elements[ 2 ] = this.z;
+
+					this.elements = elements;
+
+				}
+
+				Vector3Ex.prototype = Object.assign( Object.create( THREE.Vector3.prototype ), {
+
+					constructor: Vector3Ex
+
+				} );
+
+				return Vector3Ex;
+
+			}() );
+
+			THREE.QuaternionEx = ( function () {
+
+				function QuaternionEx( pointer, x, y, z ) {
+
+					THREE.Quaternion.call( this, x, y, z );
+
+					this.pointer = pointer;
+					var elements = new Float64Array( Module.HEAPF64.buffer, this.pointer, 4 );
+
+					elements[ 0 ] = this.x;
+					elements[ 1 ] = this.y;
+					elements[ 2 ] = this.z;
+					elements[ 3 ] = this.w;
+
+					this.elements = elements;
+
+				}
+
+				QuaternionEx.prototype = Object.assign( Object.create( THREE.Quaternion.prototype ), {
+
+					constructor: QuaternionEx
+
+				} );
+
+				return QuaternionEx;
+
+			}() );
+
+			THREE.Matrix4Ex = ( function () {
+
+				function Matrix4Ex( pointer ) {
+
+					THREE.Matrix4.call( this );
+
+					this.pointer = pointer;
+
+					var elements = new Float64Array( Module.HEAPF64.buffer, this.pointer, 16 );
+
+					for ( var i = 0; i < 16; i ++ ) {
+
+						elements[ i ] = this.elements[ i ];
+
+					}
+
+					this.elements = elements;
+
+				}
+
+				Matrix4Ex.prototype = Object.assign( Object.create( THREE.Matrix4.prototype ), {
+
+					constructor: Matrix4Ex
+
+				} );
+
+				return Matrix4Ex;
+
+			}() );
+
+			THREE.MeshEx = ( function () {
+
+				function MeshEx( geometry, material ) {
+
+					THREE.Mesh.call( this, geometry, material );
+
+					this.pointer = Module._malloc( Module.functions.sizeOfMesh() );
+					Module.functions.Mesh_init( this.pointer );
+
+					var offset = Module.functions.Object3D_getPositionPointer( this.pointer );
+
+					var position = new THREE.Vector3Ex( offset );
+					offset += 3 * 8;
+
+					var rotation = new THREE.Euler();
+					var quaternion = new THREE.QuaternionEx( offset );
+					offset += 4 * 8;
+
+					var scale = new THREE.Vector3Ex( offset, 1, 1, 1 );
+					offset += 3 * 8;
+
+					var matrix = new THREE.Matrix4Ex( offset );
+					offset += 16 * 8;
+
+					var matrixWorld = new THREE.Matrix4Ex( offset );
+					offset += 16 * 8;
+
+					function onRotationChange() {
+
+						quaternion.setFromEuler( rotation, false );
+
+					}
+
+					function onQuaternionChange() {
+
+						rotation.setFromQuaternion( quaternion, undefined, false );
+
+					}
+
+					rotation.onChange( onRotationChange );
+					quaternion.onChange( onQuaternionChange );
+
+					Object.defineProperties( this, {
+						position: {
+							configurable: true,
+							enumerable: true,
+							value: position
+						},
+						rotation: {
+							configurable: true,
+							enumerable: true,
+							value: rotation
+						},
+						quaternion: {
+							configurable: true,
+							enumerable: true,
+							value: quaternion
+						},
+						scale: {
+							configurable: true,
+							enumerable: true,
+							value: scale
+						}
+					} );
+
+					this.matrix = matrix;
+					this.matrixWorld = matrixWorld;
+
+				}
+
+				MeshEx.prototype = Object.assign( Object.create( THREE.Mesh.prototype ), {
+
+					constructor: MeshEx,
+
+					add: function ( child ) {
+
+						THREE.Mesh.prototype.add.call( this, child );
+
+						Module.functions.Object3D_add( this.pointer, child.pointer );
+						return this;
+
+					}
+
+				} );
+
+				return MeshEx;
+
+			}() );
+
+			THREE.SceneEx = ( function () {
+
+				function SceneEx() {
+
+					THREE.Scene.call( this );
+
+					this.pointer = Module._malloc( Module.functions.sizeOfScene() );
+					Module.functions.Scene_init( this.pointer );
+
+					var offset = Module.functions.Object3D_getPositionPointer( this.pointer );
+
+					var position = new THREE.Vector3Ex( offset );
+					offset += 3 * 8;
+
+					var rotation = new THREE.Euler();
+					var quaternion = new THREE.QuaternionEx( offset );
+					offset += 4 * 8;
+
+					var scale = new THREE.Vector3Ex( offset, 1, 1, 1 );
+					offset += 3 * 8;
+
+					var matrix = new THREE.Matrix4Ex( offset );
+					offset += 16 * 8;
+
+					var matrixWorld = new THREE.Matrix4Ex( offset );
+					offset += 16 * 8;
+
+					function onRotationChange() {
+
+						quaternion.setFromEuler( rotation, false );
+
+					}
+
+					function onQuaternionChange() {
+
+						rotation.setFromQuaternion( quaternion, undefined, false );
+
+					}
+
+					rotation.onChange( onRotationChange );
+					quaternion.onChange( onQuaternionChange );
+
+					Object.defineProperties( this, {
+						position: {
+							configurable: true,
+							enumerable: true,
+							value: position
+						},
+						rotation: {
+							configurable: true,
+							enumerable: true,
+							value: rotation
+						},
+						quaternion: {
+							configurable: true,
+							enumerable: true,
+							value: quaternion
+						},
+						scale: {
+							configurable: true,
+							enumerable: true,
+							value: scale
+						}
+					} );
+
+					this.matrix = matrix;
+					this.matrixWorld = matrixWorld;
+
+				}
+
+				SceneEx.prototype = Object.assign( Object.create( THREE.Scene.prototype ), {
+
+					constructor: SceneEx,
+
+					updateMatrixWorld: function ( force ) {
+
+						Module.functions.Object3D_updateMatrixWorld( this.pointer, force ? 1 : 0 );
+
+					},
+
+					add: function ( child ) {
+
+						THREE.Scene.prototype.add.call( this, child );
+
+						Module.functions.Object3D_add( this.pointer, child.pointer );
+						return this;
+
+					}
+
+				} );
+
+				return SceneEx;
+
+			}() );
+
+			function init() {
+
+				var id = 'wasmCanvas';
+				var width = window.innerWidth;
+				var height = window.innerHeight;
+				var canvas = document.createElement( 'canvas' );
+				canvas.id = id;
+				canvas.width = width;
+				canvas.height = height;
+				document.body.appendChild( canvas );
+
+				renderer = new THREE.WebGLRenderer( {
+					canvas: canvas
+				} );
+				renderer.setSize( width, height );
+				renderer.setClearColor( new THREE.Color( 0xffffff ), 1.0 );
+
+				scene = new ( useWasm ? THREE.SceneEx : THREE.Scene )();
+
+				camera = new THREE.PerspectiveCamera( 60, width / height, 1.0, 2000 );
+				camera.position.z = 50.0;
+
+				var geometrySize = 2.0;
+
+				var geometries = [
+					new THREE.BoxBufferGeometry( geometrySize, geometrySize, geometrySize ),
+					new THREE.CylinderBufferGeometry( geometrySize, geometrySize, geometrySize ),
+					new THREE.SphereBufferGeometry( geometrySize )
+				];
+
+				for ( var i = 0, il = geometries.length; i < il; i ++ ) {
+
+					geometries[ i ].removeAttribute( 'normal' );
+					geometries[ i ].removeAttribute( 'uv' );
+
+					geometries[ i ].computeBoundingSphere();
+
+				}
+
+				for ( var i = 0; i < objectNum; i ++ ) {
+
+					var color = new THREE.Color();
+					color.r = Math.random();
+					color.g = Math.random();
+					color.b = Math.random();
+
+					var mesh = new ( useWasm ? THREE.MeshEx : THREE.Mesh )(
+						geometries[ i % geometries.length ],
+						new THREE.MeshBasicMaterial( { color: color } )
+					);
+					mesh.position.x = ( Math.random() - 0.5 ) * 200.0;
+					mesh.position.y = ( Math.random() - 0.5 ) * 200.0;
+					mesh.position.z = ( Math.random() - 0.5 ) * 200.0;
+					mesh.rotation.y = Math.random() * 2.0 * Math.PI;
+					mesh.rotation.z = Math.random() * 2.0 * Math.PI;
+					mesh.scale.x = mesh.scale.y = mesh.scale.z = Math.random() * 0.5 + 0.5;
+					scene.add( mesh );
+
+				}
+
+				window.addEventListener( 'resize', onWindowResize, false );
+
+			}
+
+			function onDocumentMouseMove( event ) {
+
+				mouseX = ( event.clientX - windowHalfX ) * 0.01;
+				mouseY = ( event.clientY - windowHalfY ) * 0.01;
+
+			}
+
+			function onWindowResize() {
+
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+
+				renderer.setSize( window.innerWidth, window.innerHeight );
+
+			}
+
+			function animate() {
+
+				requestAnimationFrame( animate );
+
+				camera.position.x += ( mouseX - camera.position.x ) * 0.05;
+				camera.position.y += ( - mouseY - camera.position.y ) * 0.05;
+				camera.lookAt( scene.position );
+
+				//scene.rotation.x += 0.002;
+				//scene.rotation.y += 0.004;
+
+				if ( animationEnabled ) {
+
+					for ( var i = 0, il = scene.children.length; i < il; i ++ ) {
+
+						var child = scene.children[ i ];
+						child.rotation.x += 0.02;
+						child.rotation.y += 0.04;
+
+					}
+
+				}
+
+				renderer.render( scene, camera );
+
+				stats.update();
+
+			}
+
+		</script>
+	</body>
+</html>
