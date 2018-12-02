@@ -22,6 +22,7 @@
 			var useWasm = true;
 			var animationEnabled = true;
 			var query = location.href.split( '?' )[ 1 ];
+			var objectNum = 1000;
 
 			if ( query ) {
 
@@ -37,10 +38,6 @@
 
 						case 'num':
 							objectNum = parseInt( value );
-							break;
-
-						case 'javascript':
-							useWasm = ! ( value === 'true' || value === '1' );
 							break;
 
 						case 'animation':
@@ -89,7 +86,7 @@
 					}
 				};
 
-				gui.add( api, 'platform', [ 'wasm', 'JavaScript' ] );
+				gui.add( api, 'platform', [ 'wasm' ] );
 				gui.add( api, 'num', 1, 15000, 1 );
 				gui.add( api, 'animation' );
 				gui.add( api, 'update' );
