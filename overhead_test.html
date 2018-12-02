@@ -1,0 +1,334 @@
+﻿<html>
+<body>
+<script>
+var loop = 0x80000;
+
+function Vector3(x, y, z) {
+  this.x = x || 0.0;
+  this.y = y || 0.0;
+  this.z = z || 0.0;
+}
+
+Object.assign(Vector3.prototype, {
+  constructor: Vector3,
+  applyMatrix4: function(m) {
+    var x = this.x, y = this.y, z = this.z;
+    var e = m.elements;
+    var w = 1 / ( e[ 3 ] * x + e[ 7 ] * y + e[ 11 ] * z + e[ 15 ] );
+    this.x = ( e[ 0 ] * x + e[ 4 ] * y + e[ 8 ] * z + e[ 12 ] ) * w;
+    this.y = ( e[ 1 ] * x + e[ 5 ] * y + e[ 9 ] * z + e[ 13 ] ) * w;
+    this.z = ( e[ 2 ] * x + e[ 6 ] * y + e[ 10 ] * z + e[ 14 ] ) * w;
+    return this;
+  },
+  dot: function (v) {
+    return this.x * v.x + this.y * v.y + this.z * v.z;
+  },
+  copy: function (v) {
+    this.x = v.x;
+    this.y = v.y;
+    this.z = v.z;
+    return this;
+  }
+});
+
+function Vector3Ex(x, y, z) {
+  this.elements = new Float64Array(3);
+  this.elements[0] = x || 0.0;
+  this.elements[1] = y || 0.0;
+  this.elements[2] = z || 0.0;
+}
+
+Object.assign(Vector3Ex.prototype, {
+  constructor: Vector3Ex,
+  applyMatrix4: function(m) {
+    var x = this.x, y = this.y, z = this.z;
+    var e = m.elements;
+    var w = 1 / ( e[ 3 ] * x + e[ 7 ] * y + e[ 11 ] * z + e[ 15 ] );
+    this.x = ( e[ 0 ] * x + e[ 4 ] * y + e[ 8 ] * z + e[ 12 ] ) * w;
+    this.y = ( e[ 1 ] * x + e[ 5 ] * y + e[ 9 ] * z + e[ 13 ] ) * w;
+    this.z = ( e[ 2 ] * x + e[ 6 ] * y + e[ 10 ] * z + e[ 14 ] ) * w;
+    return this;
+  },
+  dot: function (v) {
+    return this.x * v.x + this.y * v.y + this.z * v.z;
+  },
+  copy: function (v) {
+    this.x = v.x;
+    this.y = v.y;
+    this.z = v.z;
+    return this;
+  }
+});
+
+Object.defineProperties(Vector3Ex.prototype, {
+  x: {
+    get: function () {
+      return this.elements[0];
+    },
+    set: function (value) {
+      this.elements[0] = value;
+    }
+  },
+  y: {
+    get: function () {
+      return this.elements[1];
+    },
+    set: function (value) {
+      this.elements[1] = value;
+    }
+  },
+  z: {
+    get: function () {
+      return this.elements[2];
+    },
+    set: function (value) {
+      this.elements[2] = value;
+    }
+  }
+});
+
+function Matrix4() {
+  this.elements = [
+    1.0, 0.0, 0.0, 0.0,
+    0.0, 1.0, 0.0, 0.0,
+    0.0, 0.0, 1.0, 0.0,
+    0.0, 0.0, 0.0, 1.0
+  ];
+}
+
+Object.assign(Matrix4.prototype, {
+  constructor: Matrix4,
+  getMaxScaleOnAxis: function () {
+    var te = this.elements;
+    var scaleXSq = te[ 0 ] * te[ 0 ] + te[ 1 ] * te[ 1 ] + te[ 2 ] * te[ 2 ];
+    var scaleYSq = te[ 4 ] * te[ 4 ] + te[ 5 ] * te[ 5 ] + te[ 6 ] * te[ 6 ];
+    var scaleZSq = te[ 8 ] * te[ 8 ] + te[ 9 ] * te[ 9 ] + te[ 10 ] * te[ 10 ];
+    return Math.sqrt( Math.max( scaleXSq, scaleYSq, scaleZSq ) );
+  }
+});
+
+function Matrix4Ex() {
+  this.elements = new Float64Array([
+    1.0, 0.0, 0.0, 0.0,
+    0.0, 1.0, 0.0, 0.0,
+    0.0, 0.0, 1.0, 0.0,
+    0.0, 0.0, 0.0, 1.0
+  ]);
+}
+
+Object.assign(Matrix4Ex.prototype, {
+  constructor: Matrix4Ex,
+  getMaxScaleOnAxis: function () {
+    var te = this.elements;
+    var scaleXSq = te[ 0 ] * te[ 0 ] + te[ 1 ] * te[ 1 ] + te[ 2 ] * te[ 2 ];
+    var scaleYSq = te[ 4 ] * te[ 4 ] + te[ 5 ] * te[ 5 ] + te[ 6 ] * te[ 6 ];
+    var scaleZSq = te[ 8 ] * te[ 8 ] + te[ 9 ] * te[ 9 ] + te[ 10 ] * te[ 10 ];
+    return Math.sqrt( Math.max( scaleXSq, scaleYSq, scaleZSq ) );
+  }
+});
+
+function Sphere() {
+  this.center = new Vector3();
+  this.radius = 1.0;
+}
+
+Object.assign(Sphere.prototype, {
+  constructor: Sphere,
+  applyMatrix4: function (m) {
+    this.center.applyMatrix4(m);
+    this.radius = this.radius * m.getMaxScaleOnAxis();
+  },
+  copy: function (sphere) {
+    this.center.copy(sphere.center);
+    this.radius = sphere.radius;
+    return this;
+  }
+});
+
+function SphereEx() {
+  this.center = new Vector3Ex();
+  this.radius = 1.0;
+}
+
+Object.assign(SphereEx.prototype, {
+  constructor: SphereEx,
+  applyMatrix4: function (m) {
+    this.center.applyMatrix4(m);
+    this.radius = this.radius * m.getMaxScaleOnAxis();
+  },
+  copy: function (sphere) {
+    this.center.copy(sphere.center);
+    this.radius = sphere.radius;
+    return this;
+  }
+});
+
+function Frustum() {
+  this.planes = [
+    new Plane(),
+    new Plane(),
+    new Plane(),
+    new Plane(),
+    new Plane(),
+    new Plane()
+  ];
+}
+
+Object.assign(Frustum.prototype, {
+  constructor: Frustum,
+  intersectsObject: function () {
+    var sphere = new Sphere();
+    return function intersectsObject(s, m) {
+      sphere.copy(s).applyMatrix4(m);
+      return this.intersectsSphere(sphere);
+    };
+  }(),
+  intersectsSphere: function (sphere) {
+    var planes = this.planes;
+    var center = sphere.center;
+    var negRadius = - sphere.radius;
+    for (var i = 0; i < 6; i++) {
+      var distance = planes[ i ].distanceToPoint( center );
+      if ( distance > negRadius ) {
+        return false;
+      }
+    }
+    return true;
+  }
+});
+
+function FrustumEx() {
+  this.planes = [
+    new PlaneEx(),
+    new PlaneEx(),
+    new PlaneEx(),
+    new PlaneEx(),
+    new PlaneEx(),
+    new PlaneEx()
+  ];
+}
+
+Object.assign(FrustumEx.prototype, {
+  constructor: FrustumEx,
+  intersectsObject: function () {
+    var sphere = new SphereEx();
+    return function intersectsObject(s, m) {
+      sphere.copy(s).applyMatrix4(m);
+      return this.intersectsSphere(sphere);
+    };
+  }(),
+  intersectsSphere: function (sphere) {
+    var planes = this.planes;
+    var center = sphere.center;
+    var negRadius = - sphere.radius;
+    for (var i = 0; i < 6; i++) {
+      var distance = planes[ i ].distanceToPoint( center );
+      if ( distance > negRadius ) {
+        return false;
+      }
+    }
+    return true;
+  }
+});
+
+function Plane() {
+  this.normal = new Vector3(1, 0, 0);
+  this.constant = 0;
+}
+
+Object.assign(Plane.prototype, {
+  constructor: Plane,
+  distanceToPoint: function (point) {
+    return this.normal.dot(point) + this.constant;
+  }
+});
+
+function PlaneEx() {
+  this.normal = new Vector3Ex(1, 0, 0);
+  this.constant = 0;
+}
+
+Object.assign(PlaneEx.prototype, {
+  constructor: PlaneEx,
+  distanceToPoint: function (point) {
+    return this.normal.dot(point) + this.constant;
+  }
+});
+
+var fru1 = new Frustum();
+var fru2 = new FrustumEx();
+var sph1 = [];
+var sph2 = [];
+var mat1 = [];
+var mat2 = [];
+
+for(var i = 0; i < loop; i++) {
+  sph1[i] = new Sphere();
+  sph2[i] = new SphereEx();
+  mat1[i] = new Matrix4();
+  mat2[i] = new Matrix4Ex();
+}
+
+function test1() {
+  var n = loop;
+  var s = sph1;
+  var m = mat1;
+  var f = fru1;
+  for(var i = 0; i < n; i++) {
+    f.intersectsObject(s[i], m[i]);
+  }
+}
+
+function test2() {
+  var n = loop;
+  var s = sph2;
+  var m = mat2;
+  var f = fru2;
+  for(var i = 0; i < n; i++) {
+    f.intersectsObject(s[i], m[i]);
+  }
+}
+
+function run1() {
+  var startTime = performance.now();
+  test1();
+  var endTime = performance.now();
+  return endTime - startTime;
+}
+
+function run2() {
+  var startTime = performance.now();
+  test2();
+  var endTime = performance.now();
+  return endTime - startTime;
+}
+
+var count = -5;
+var totalElapsedTime1 = 0.0;
+var totalElapsedTime2 = 0.0;
+
+function run() {
+  setTimeout(run, 500);
+  count++;
+  document.getElementById('button').disabled = true;
+  document.getElementById('loopNum').innerText = loop;
+
+  var elapsedTime1 = run1();
+  var elapsedTime2 = run2();
+
+  if (count <= 0) return;
+
+  totalElapsedTime1 += elapsedTime1;
+  totalElapsedTime2 += elapsedTime2;
+
+  document.getElementById('RegularArrayPerformance').innerText = elapsedTime1.toFixed(2) + '/' + (totalElapsedTime1 / count).toFixed(2);
+  document.getElementById('TypedArrayPerformance').innerText = elapsedTime2.toFixed(2) + '/' + (totalElapsedTime2 / count).toFixed(2);
+}
+
+</script>
+<button id="button" onclick="run()">run</button><br />
+#Loop: <span id="loopNum"></span><br />
+Regular array: <span id="RegularArrayPerformance"></span> ms<br />
+Typed array: <span id="TypedArrayPerformance"></span> ms<br />
+</body>
+</html>
