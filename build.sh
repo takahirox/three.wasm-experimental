@@ -28,7 +28,6 @@ emcc \
 	'_Object3D_add',\
 	'_Object3D_getPositionPointer',\
 	'_Object3D_updateMatrixWorld',\
-	'_Object3D_updateMatrixWorld2',\
 	'_Mesh_init',\
 	'_MeshBasicMaterial_init',\
 	'_Scene_init',\
