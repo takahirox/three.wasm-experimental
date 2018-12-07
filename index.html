@@ -21,6 +21,7 @@
 
 			var useWasm = location.href.indexOf( 'index_js.html' ) < 0;
 			var objectNum = 1000;
+			var distance = 100.0;
 			var animationEnabled = true;
 			var query = location.href.split( '?' )[ 1 ];
 
@@ -38,6 +39,10 @@
 
 						case 'num':
 							objectNum = parseInt( value );
+							break;
+
+						case 'distance':
+							distance = parseFloat( value );
 							break;
 
 						case 'animation':
@@ -80,14 +85,16 @@
 				var api = {
 					'platform': useWasm ? 'wasm' : 'JavaScript',
 					'num': objectNum,
+					'distance': distance,
 					'animation': animationEnabled,
 					'update': function () {
-						location.href = 'index' + ( api.platform === 'JavaScript' ? '_js' : '' ) + '.html?num=' + api.num + '&animation=' + api.animation;
+						location.href = 'index' + ( api.platform === 'JavaScript' ? '_js' : '' ) + '.html?num=' + api.num + '&distance=' + api.distance + '&animation=' + api.animation;
 					}
 				};
 
 				gui.add( api, 'platform', [ 'wasm', 'JavaScript' ] );
 				gui.add( api, 'num', 1, 15000, 1 );
+				gui.add( api, 'distance', 0, 1000, 1 );
 				gui.add( api, 'animation' );
 				gui.add( api, 'update' );
 
@@ -891,9 +898,9 @@
 						geometries[ i % geometries.length ],
 						new THREE.MeshBasicMaterialEx( { color: color } )
 					);
-					mesh.position.x = ( Math.random() - 0.5 ) * 100.0;
-					mesh.position.y = ( Math.random() - 0.5 ) * 100.0;
-					mesh.position.z = ( Math.random() - 0.5 ) * 100.0;
+					mesh.position.x = ( Math.random() - 0.5 ) * distance;
+					mesh.position.y = ( Math.random() - 0.5 ) * distance;
+					mesh.position.z = ( Math.random() - 0.5 ) * distance;
 					mesh.rotation.y = Math.random() * 2.0 * Math.PI;
 					mesh.rotation.z = Math.random() * 2.0 * Math.PI;
 					mesh.scale.x = mesh.scale.y = mesh.scale.z = Math.random() * 0.5 + 0.5;
