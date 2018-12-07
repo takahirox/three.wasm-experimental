@@ -36,8 +36,11 @@ private:
 	Camera *currentCamera;
 	Frustum frustum;
 	Vector3 tmpVector3;
+	std::map<std::string, int> uniformLocationMap;
 
 	bool activateContext();
+
+	GLuint compileShader();
 
 	void projectObject(
 		Object3D *object,

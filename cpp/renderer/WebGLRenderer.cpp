@@ -47,7 +47,6 @@ GLuint loadShader(
 	glGetShaderiv(shader, GL_COMPILE_STATUS, &compiled);
 
 	if(compiled == 0) {
-
 		GLint infoLen = 0;
 		glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &infoLen);
 
@@ -65,7 +64,7 @@ GLuint loadShader(
 	return shader;
 }
 
-GLuint compileShader() {
+GLuint WebGLRenderer::compileShader() {
 	GLbyte vertexShaderCode[] =  
 		"attribute vec3 position;\n"
 		"uniform mat4 modelMatrix;\n"
@@ -101,9 +100,9 @@ GLuint compileShader() {
 	glBindAttribLocation(program, 0, "position");
 	glLinkProgram(program);
 
-	printf("%d\n", glGetUniformLocation(program, "modelViewMatrix"));
-	printf("%d\n", glGetUniformLocation(program, "projectionMatrix"));
-	printf("%d\n", glGetUniformLocation(program, "color"));
+	this->uniformLocationMap["modelViewMatrix"] = glGetUniformLocation(program, "modelViewMatrix");
+	this->uniformLocationMap["projectionMatrix"] = glGetUniformLocation(program, "projectionMatrix");
+	this->uniformLocationMap["color"] = glGetUniformLocation(program, "color");
 
 	GLint linked;
 
@@ -248,7 +247,7 @@ void WebGLRenderer::renderObject(
 		for(int i = 0; i < 16; ++i) {
 			projectionMatrixElements[i] = camera->projectionMatrix.elements[i];
 		}
-		glUniformMatrix4fv(6, 1, GL_FALSE, projectionMatrixElements);
+		glUniformMatrix4fv(this->uniformLocationMap["projectionMatrix"], 1, GL_FALSE, projectionMatrixElements);
 		this->currentCamera = camera;
 	}
 
@@ -281,13 +280,13 @@ void WebGLRenderer::renderObject(
 	for(int i = 0; i < 16; ++i) {
 		modelViewMatrixElements[i] = (GLfloat)object->modelViewMatrix.elements[i];
 	}
-	glUniformMatrix4fv(5, 1, GL_FALSE, modelViewMatrixElements);
+	glUniformMatrix4fv(this->uniformLocationMap["modelViewMatrix"], 1, GL_FALSE, modelViewMatrixElements);
 
 	GLfloat colorElements[3];
 	colorElements[0] = color->x;
 	colorElements[1] = color->y;
 	colorElements[2] = color->z;
-	glUniform3fv(7, 1, colorElements);
+	glUniform3fv(this->uniformLocationMap["color"], 1, colorElements);
 
 	this->renderer.render(drawStart, drawCount);
 }
@@ -303,7 +302,7 @@ WebGLRenderer* WebGLRenderer::render(
 	Camera *camera
 ) {
 	if(! this->initialized) {
-		this->program = compileShader();
+		this->program = this->compileShader();
 		this->initialized = true;
 		this->activateContext();
 		this->viewport(this->width, this->height);
