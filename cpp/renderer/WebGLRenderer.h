@@ -65,7 +65,10 @@ public:
 	bool initialized;
 	EMSCRIPTEN_WEBGL_CONTEXT_HANDLE context;
 
-	WebGLRenderer(char *_id);
+	WebGLRenderer(
+		char *_id,
+		bool antialias
+	);
 
 	WebGLRenderer* setSize(
 		int width,

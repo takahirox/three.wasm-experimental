@@ -128,7 +128,8 @@ GLuint WebGLRenderer::compileShader() {
 }
 
 WebGLRenderer::WebGLRenderer(
-	char *_id
+	char *_id,
+	bool antialias
 ): id(_id), currentGeometry(NULL), initialized(false),
 	program(0), currentProgram(0), currentCamera(NULL) {
 	printf( "Context creation for %s\n", id );
@@ -137,7 +138,7 @@ WebGLRenderer::WebGLRenderer(
 	attrs.explicitSwapControl = 0;
 	attrs.depth = 1;
 	attrs.stencil = 1;
-	attrs.antialias = 1;
+	attrs.antialias = antialias ? 1 : 0;
 	attrs.majorVersion = 1;
 	attrs.minorVersion = 0;
 	this->context = emscripten_webgl_create_context(_id, &attrs);
