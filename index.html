@@ -23,6 +23,7 @@
 			var objectNum = 1000;
 			var distance = 100.0;
 			var animationEnabled = true;
+			var antialias = false;
 			var query = location.href.split( '?' )[ 1 ];
 
 			if ( query ) {
@@ -47,6 +48,10 @@
 
 						case 'animation':
 							animationEnabled = value === 'true' || value === '1';
+							break;
+
+						case 'antialias':
+							antialias = value === 'true' || value === '1';
 							break;
 
 						default:
@@ -87,8 +92,15 @@
 					'num': objectNum,
 					'distance': distance,
 					'animation': animationEnabled,
+					'antialias': antialias,
 					'update': function () {
-						location.href = 'index' + ( api.platform === 'JavaScript' ? '_js' : '' ) + '.html?num=' + api.num + '&distance=' + api.distance + '&animation=' + api.animation;
+						location.href = 'index' +
+							( api.platform === 'JavaScript' ? '_js' : '' ) +
+							'.html?' + 
+							'num=' + api.num +
+							'&distance=' + api.distance +
+							'&animation=' + api.animation +
+							'&antialias=' + api.antialias;
 					}
 				};
 
@@ -96,6 +108,7 @@
 				gui.add( api, 'num', 1, 15000, 1 );
 				gui.add( api, 'distance', 0, 1000, 1 );
 				gui.add( api, 'animation' );
+				gui.add( api, 'antialias' );
 				gui.add( api, 'update' );
 
 			}
@@ -235,7 +248,7 @@
 				Module.functions.WebGLRenderer_init = Module.cwrap(
 					'WebGLRenderer_init',
 					'number',
-					[ 'number', 'number' ]
+					[ 'number', 'number', 'number']
 				);
 
 				Module.functions.WebGLRenderer_setSize = Module.cwrap(
@@ -800,7 +813,7 @@
 					var id = canvas.id;
 
 					this.pointer = Module._malloc( Module.functions.sizeOfWebGLRenderer() );
-					Module.functions.WebGLRenderer_init( this.pointer, stringsToPointer( id ) );
+					Module.functions.WebGLRenderer_init( this.pointer, stringsToPointer( id ), params.antialias === true ? 1 : 0 );
 
 				}
 
@@ -856,7 +869,7 @@
 
 				renderer = new THREE[ 'WebGLRenderer' + ( useWasm ? 'Ex' : '' ) ]( {
 					canvas: canvas,
-					antialias: true
+					antialias: antialias
 				} );
 				renderer.setSize( width, height );
 				renderer.setClearColor( new THREE.Color( 0xffffff ), 1.0 );
