@@ -855,7 +855,8 @@
 				document.body.appendChild( canvas );
 
 				renderer = new THREE[ 'WebGLRenderer' + ( useWasm ? 'Ex' : '' ) ]( {
-					canvas: canvas
+					canvas: canvas,
+					antialias: true
 				} );
 				renderer.setSize( width, height );
 				renderer.setClearColor( new THREE.Color( 0xffffff ), 1.0 );
