@@ -163,9 +163,10 @@ extern "C" {
 
 	WebGLRenderer* WebGLRenderer_init(
 		WebGLRenderer *renderer,
-		char *id
+		char *id,
+		bool antialias
 	) {
-		return new(renderer) WebGLRenderer(id);
+		return new(renderer) WebGLRenderer(id, antialias);
 	}
 
 	WebGLRenderer* WebGLRenderer_setSize(
